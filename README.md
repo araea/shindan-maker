@@ -75,4 +75,4 @@ For more details, check the [API documentation](https://docs.rs/shindan-maker).
 
 ## License
 
-MIT OR Apache-2.0
+MIT OR Apache-2.0.
