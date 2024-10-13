@@ -16,7 +16,7 @@ A Rust library for interacting with [ShindanMaker](https://en.shindanmaker.com/)
 
 ```toml
 [dependencies]
-shindan-maker = "0.1.5"
+shindan-maker = "0.1.6"
 ```
 
 ## Example

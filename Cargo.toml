@@ -4,6 +4,7 @@ version = "0.1.5"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 authors = ["Nawyjx <3373167460@qq.com>"]
+documentation = "https://docs.rs/shindan-maker"
 repository = "https://github.com/araea/shindan-maker"
 keywords = ["shindan", "shindanmaker", "quiz", "shindan-maker"]
 description = "A Rust library for interacting with Shindan Maker, the popular personality quiz service."
