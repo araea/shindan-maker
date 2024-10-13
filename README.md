@@ -28,8 +28,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Create a client for the English domain
     let client = ShindanClient::new(ShindanDomain::En)?;
 
-    // Shindan ID for "What kind of programmer are you?"
-    let shindan_id = "1101229";
+    // Shindan ID for "What kind of person will you turn out to be?"
+    let shindan_id = "1221154";
 
     // Get the shindan title
     let title = client.get_title(shindan_id).await?;
