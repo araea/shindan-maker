@@ -230,7 +230,7 @@ impl ShindanClient {
             .ok_or(ShindanError::SessionCookieNotFound)
     }
 
-    fn extract_form_data<'a>(
+    fn extract_form_data(
         dom: &VDom,
         name: &str,
     ) -> Result<Vec<(&'static str, String)>, ShindanError> {
@@ -339,7 +339,7 @@ impl ShindanClient {
 /// let text_segments = filter_segments_by_type(&segments, "text");
 /// assert_eq!(text_segments.len(), 2);
 /// ```
-pub fn filter_segments_by_type<'a>(segments: &'a Vec<Segment>, type_: &str) -> Vec<&'a Segment> {
+pub fn filter_segments_by_type<'a>(segments: &'a [Segment], type_: &str) -> Vec<&'a Segment> {
     segments.iter().filter(|segment| segment.type_ == type_).collect()
 }
 
