@@ -14,7 +14,7 @@ pub use segment::{Segment, filter_segments_by_type};
 #[cfg(test)]
 mod tests {
     use tokio;
-    use crate::client::{ShindanClient, ShindanDomain};
+    use super::client::{ShindanClient, ShindanDomain};
 
     #[tokio::test]
     async fn test_get_title() {

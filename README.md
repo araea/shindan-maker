@@ -1,6 +1,6 @@
-# Shindan Maker
+# ShindanMaker
 
-A Rust library for interacting with Shindan Maker, the popular personality quiz service.
+A Rust library for interacting with [ShindanMaker](https://en.shindanmaker.com/), the popular personality quiz service.
 
 ## Features
 
@@ -8,16 +8,14 @@ A Rust library for interacting with Shindan Maker, the popular personality quiz 
 - Asynchronous API
 - Easy shindan submission and result parsing
 
-## Installation
+## Usage
 
 ```toml
 [dependencies]
-shindan-maker = "0.1.0"
+shindan-maker = "0.1.4"
 ```
 
 ## Example
-
-Here's a comprehensive example demonstrating how to use the Shindan Maker library:
 
 ```rust
 use shindan_maker::{ShindanClient, ShindanDomain, ShindanResult, Segment};
@@ -36,11 +34,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("Shindan title: {}", title);
 
     // Submit the shindan
-    let result = client.submit_shindan(shindan_id, "Rust Developer").await?;
+    let result = client.submit_shindan(shindan_id, "Rust").await?;
 
     // Process the result
     if let ShindanResult::Text { title, content } = result {
         println!("Result title: {}", title);
+        println!("Result content: {:#?}", content);
 
         // Print text segments
         for segment in content.iter().filter_map(|s| s.get_text()) {
@@ -60,18 +59,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 ```
-
-This example shows how to:
-
-1. Create a `ShindanClient`
-2. Fetch a shindan title
-3. Submit a shindan and get results
-4. Process different types of result segments (text and images)
-5. Use the `filter_segments_by_type` utility function
-
-## Documentation
-
-For more details, check the [API documentation](https://docs.rs/shindan-maker).
 
 ## License
 
