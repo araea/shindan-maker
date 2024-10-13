@@ -8,8 +8,8 @@ A Rust library for interacting with [ShindanMaker](https://en.shindanmaker.com/)
 
 ## Features
 
-- Multi-domain support (JP, EN, CN, KR, TH)
 - Asynchronous API
+- Multi-domain support (JP, EN, CN, KR, TH)
 - Easy shindan submission and result parsing
 
 ## Usage
