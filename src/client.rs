@@ -1,13 +1,25 @@
 use std::fmt;
+use std::fmt::{Debug, Formatter};
 use std::time::Duration;
 use reqwest::{header, Client};
 use serde_json::json;
-use tl::Node::{Raw, Tag};
-use tl::VDom;
-use crate::ShindanError;
+use anyhow::{Context, Result};
+use scraper::{Html, Node, Selector};
+#[cfg(feature = "image")]
+use anyhow::anyhow;
+
 use crate::Segment;
 
-/// Represents different Shindan domains.
+#[cfg(feature = "image")]
+use crate::html_template::HTML_TEMPLATE;
+#[cfg(feature = "image")]
+use headless_chrome::{Browser, LaunchOptions};
+#[cfg(feature = "image")]
+use headless_chrome::browser::default_executable;
+#[cfg(feature = "image")]
+use headless_chrome::protocol::cdp::Page;
+
+/// Represents a Shindan Maker domain.
 #[derive(Debug, Clone, Copy)]
 pub enum ShindanDomain {
     Jp,
@@ -18,7 +30,7 @@ pub enum ShindanDomain {
 }
 
 impl fmt::Display for ShindanDomain {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let url = match self {
             Self::Jp => "https://shindanmaker.com/",
             Self::En => "https://en.shindanmaker.com/",
@@ -30,112 +42,345 @@ impl fmt::Display for ShindanDomain {
     }
 }
 
-/// Represents the result of a Shindan submission.
+/// Represents the text result of a shindan.
 #[derive(Debug, Clone)]
-pub enum ShindanResult {
-    Text {
-        title: String,
-        content: Vec<Segment>,
-    }
+pub struct ShindanTextResult {
+    pub title: String,
+    pub content: Vec<Segment>,
 }
 
-/// Client for interacting with Shindan Maker.
-#[derive(Debug)]
+/// Represents the image result of a shindan.
+#[cfg(feature = "image")]
+#[derive(Debug, Clone)]
+pub struct ShindanImageResult {
+    pub title: String,
+    pub base64: String,
+}
+
+/// A client for interacting with Shindan Maker.
+#[derive(Clone)]
 pub struct ShindanClient {
     client: Client,
+    #[cfg(feature = "image")]
+    browser: Option<Browser>,
     domain: ShindanDomain,
 }
 
 const TIMEOUT_SECS: u64 = 3;
 
 impl ShindanClient {
-    /// Creates a new ShindanClient with the specified domain.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use shindan_maker::{ShindanClient, ShindanDomain};
-    ///
-    /// let client = ShindanClient::new(ShindanDomain::En).expect("Failed to create client");
-    /// ```
-    pub fn new(domain: ShindanDomain) -> Result<Self, reqwest::Error> {
+    /**
+    Creates a new ShindanClient with the specified domain.
+
+    # Arguments
+
+    * `domain` - The domain to use.
+
+    # Examples
+
+    ```
+    use shindan_maker::{ShindanClient, ShindanDomain};
+
+    #[tokio::main]
+    async fn main() {
+        let client = ShindanClient::new(ShindanDomain::En);
+        assert!(client.is_ok());
+    }
+    ```
+    */
+    pub fn new(domain: ShindanDomain) -> Result<Self> {
         Ok(Self {
             domain,
             client: Client::builder()
                 .timeout(Duration::from_secs(TIMEOUT_SECS))
                 .build()?,
+            #[cfg(feature = "image")]
+            browser: None,
         })
     }
 
-    /// Sets the domain for the ShindanClient.
-    pub fn set_domain(&mut self, domain: ShindanDomain) {
-        self.domain = domain;
+    /**
+    Initializes the browser for image results.
+
+    # Examples
+
+    ```
+    use shindan_maker::{ShindanClient, ShindanDomain};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = ShindanClient::new(ShindanDomain::En)?.init_browser();
+        assert!(client.is_ok());
+
+        Ok(())
+    }
+    ```
+    */
+    #[cfg(feature = "image")]
+    pub fn init_browser(mut self) -> Result<Self> {
+        let launch_options = LaunchOptions::default_builder()
+            .args(vec![
+                "--window-position=-2400,-2400".as_ref(),
+            ])
+            .path(Some(default_executable()
+                .map_err(|e| anyhow!(e))?))
+            .build()?;
+
+        self.browser = Some(Browser::new(launch_options)?);
+        Ok(self)
     }
 
-    /// Gets the title of a Shindan by its ID.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use shindan_maker::{ShindanClient, ShindanDomain};
-    /// # use tokio;
-    ///
-    /// #[tokio::main]
-    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     let client = ShindanClient::new(ShindanDomain::En)?;
-    ///     let title = client.get_title("1218842").await?;
-    ///     println!("Shindan title: {}", title);
-    ///     Ok(())
-    /// }
-    /// ```
-    pub async fn get_title(&self, id: &str) -> Result<String, ShindanError> {
+    /**
+    Gets the title of a shindan with the specified ID.
+
+    # Arguments
+
+    * `id` - The ID of the shindan.
+
+    # Examples
+
+    ```
+    use std::error::Error;
+    use shindan_maker::{ShindanClient, ShindanDomain};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn Error>> {
+        let client = ShindanClient::new(ShindanDomain::En)?;
+        let title = client.get_title("1218842").await?;
+        println!("Title: {}", title);
+        Ok(())
+    }
+    ```
+    */
+    pub async fn get_title(&self, id: &str) -> Result<String> {
         let url = format!("{}{}", self.domain, id);
-        let response = self.client.get(&url).send().await?;
-        let text = response.text().await?;
-        let document = tl::parse(&text, tl::ParserOptions::default())
-            .map_err(|e| ShindanError::Parse(e.to_string()))?;
-        self.extract_title(&document)
+
+        let response = self.client
+            .get(&url)
+            .send()
+            .await?;
+
+        let text = response
+            .text()
+            .await?;
+
+        let document = Html::parse_document(&text);
+        Self::extract_title(&document)
     }
 
-    /// Submits a Shindan and returns the result.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use shindan_maker::{ShindanClient, ShindanDomain, ShindanResult};
-    /// # use tokio;
-    ///
-    /// #[tokio::main]
-    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     let client = ShindanClient::new(ShindanDomain::En)?;
-    ///     let result = client.submit_shindan("1218842", "test_user").await?;
-    ///     if let ShindanResult::Text { title, content } = result {
-    ///         println!("Title: {}", title);
-    ///         for segment in content {
-    ///             if let Some(text) = segment.get_text() {
-    ///                 println!("Text: {}", text);
-    ///             }
-    ///         }
-    ///     }
-    ///     Ok(())
-    /// }
-    /// ```
-    pub async fn submit_shindan(
+    /**
+    Gets the text result of a shindan with the specified ID and name.
+
+    # Arguments
+
+    * `id` - The ID of the shindan.
+    * `name` - The name to use.
+
+    # Examples
+
+    ## Basic usage
+
+    ```
+    use std::error::Error;
+    use shindan_maker::{ShindanClient, ShindanDomain, ShindanTextResult};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn Error>> {
+        let client = ShindanClient::new(ShindanDomain::En)?;
+        let result = client.get_text_result("1218842", "test_user").await?;
+
+        let ShindanTextResult { title, content } = result;
+        println!("Result title: {}", title);
+        println!("Result content: {:#?}", content);
+
+        Ok(())
+    }
+    ```
+
+    ## Printing text segments
+
+    ```
+    use shindan_maker::{ShindanClient, ShindanDomain, ShindanTextResult};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = ShindanClient::new(ShindanDomain::En)?;
+        let result = client.get_text_result("1218842", "test_user").await?;
+
+        let ShindanTextResult { title, content } = result;
+
+        println!("Result title: {}", title);
+
+        let mut text = String::new();
+        for segment in content.iter() {
+            match segment.type_.as_str() {
+                "text" => {
+                    text.push_str(&segment.get_text().unwrap());
+                }
+                "image" => {
+                    text.push_str(&segment.get_image_url().unwrap());
+                }
+                _ => {}
+            }
+        }
+        println!("Result text: {}", text);
+
+        Ok(())
+    }
+    ```
+
+    ## Filtering segments by type
+
+    ```
+    use shindan_maker::{ShindanClient, ShindanDomain, filter_segments_by_type};
+    use serde_json::json;
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+        let client = ShindanClient::new(ShindanDomain::En)?;
+        let result = client.get_text_result("1218842", "test_user").await?;
+
+        println!("Result title: {}", result.title);
+
+        let text_segments = filter_segments_by_type(&result.content, "text");
+        assert_eq!(text_segments.len(), 2);
+
+        Ok(())
+    }
+    ```
+    */
+    pub async fn get_text_result(
         &self,
         id: &str,
         name: &str,
-    ) -> Result<ShindanResult, ShindanError> {
+    ) -> Result<ShindanTextResult> {
+        let (title, response_text) = self.get_title_and_init_res(id, name).await?;
+
+        let result_document = Html::parse_document(&response_text);
+
+        let mut content = Vec::new();
+
+        result_document.select(&Selector::parse("#post_display").expect("Invalid selector"))
+            .next()
+            .context("Failed to get next element")?
+            .children()
+            .for_each(|child| {
+                let node = child.value();
+                match node {
+                    Node::Text(text) => {
+                        let text = text.replace("&nbsp;", " ");
+                        content.push(Segment::new("text", json!({
+                            "text": text
+                        })));
+                    }
+                    Node::Element(element) => {
+                        if element.name() == "br" {
+                            let text = "\n".to_string();
+                            content.push(Segment::new("text", json!({
+                                "text": text
+                            })));
+                        } else if element.name() == "img" {
+                            let image_url = element.attr("data-src").expect("Failed to get 'data-src' attribute").to_string();
+                            content.push(Segment::new("image", json!({
+                                "file": image_url
+                            })));
+                        }
+                    }
+                    _ => {}
+                }
+            });
+
+        Ok(ShindanTextResult { title, content })
+    }
+
+    /**
+    Gets the image result of a shindan with the specified ID and name.
+
+    # Arguments
+
+    * `id` - The ID of the shindan.
+    * `name` - The name to use.
+
+    # Examples
+
+    ```
+    use std::error::Error;
+    use base64::Engine;
+    use shindan_maker::{ShindanClient, ShindanDomain};
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn Error>> {
+        let client = ShindanClient::new(ShindanDomain::En)?.init_browser()?;
+        let result = client.get_image_result("1218842", "test_user").await?;
+
+        println!("Result title: {}", result.title);
+
+        let png_data = base64::prelude::BASE64_STANDARD.decode(result.base64)?;
+        std::fs::write("test.png", png_data)?;
+
+        Ok(())
+    }
+    ```
+    */
+    #[cfg(feature = "image")]
+    pub async fn get_image_result(
+        &self,
+        id: &str,
+        name: &str,
+    ) -> Result<ShindanImageResult> {
+        if self.browser.is_none() {
+            Err(anyhow!("Browser not initialized"))?;
+        }
+
+        let (title, response_text) = self.get_title_and_init_res(id, name).await?;
+
+        let html = Self::get_html_string(id, &response_text)?;
+
+        let tab = self.browser
+            .as_ref()
+            .unwrap()
+            .new_tab()?;
+
+        let expression = format!("document.open();
+            document.write(String.raw`{}`);
+            document.close();", html);
+        tab.evaluate(&expression, false).context("Failed to evaluate expression")?;
+        tab.wait_until_navigated()?;
+
+        let element = tab.find_element("#title_and_result")?;
+
+        let base64 = element.parent.call_method(Page::CaptureScreenshot {
+            format: Some(Page::CaptureScreenshotFormatOption::Png),
+            clip: Some(element.get_box_model()?.border_viewport()),
+            quality: Some(90),
+            from_surface: Some(true),
+            capture_beyond_viewport: Some(true),
+        })?
+            .data;
+
+        tab.close(false)?;
+
+        Ok(ShindanImageResult {
+            title,
+            base64,
+        })
+    }
+
+    async fn get_title_and_init_res(&self, id: &str, name: &str) -> Result<(String, String)> {
         let url = format!("{}{}", self.domain, id);
-        let initial_response = self.client.get(&url).send().await?;
+        let initial_response = self.client
+            .get(&url)
+            .send()
+            .await?;
+
         let session_cookie = Self::extract_session_cookie(&initial_response)?;
-        let initial_response_text = initial_response.text().await?;
-        let initial_document = tl::parse(&initial_response_text, tl::ParserOptions::default())
-            .map_err(|e| ShindanError::Parse(e.to_string()))?;
+        let initial_response_text = initial_response
+            .text()
+            .await?;
 
-        let title = self.extract_title(&initial_document)?;
-        let form_data = ShindanClient::extract_form_data(&initial_document, name)?;
+        let (title, form_data) = Self::extract_title_and_form_data(&initial_response_text, name)?;
 
-        let headers = self.prepare_headers(&session_cookie)?;
+        let headers = Self::prepare_headers(&session_cookie)?;
         let response_text = self.client
             .post(&url)
             .headers(headers)
@@ -145,64 +390,49 @@ impl ShindanClient {
             .text()
             .await?;
 
-        let result_document = tl::parse(&response_text, tl::ParserOptions::default())
-            .map_err(|e| ShindanError::Parse(e.to_string()))?;
-        self.parse_result(&result_document, title)
+        Ok((title, response_text))
     }
 
-    fn extract_title(&self, dom: &VDom) -> Result<String, ShindanError> {
-        let parser = dom.parser();
-        let element = dom.get_element_by_id("shindanTitle")
-            .ok_or_else(|| ShindanError::Parse("Title not found".into()))?
-            .get(parser)
-            .unwrap();
+    fn extract_title_and_form_data(html_content: &str, name: &str) -> Result<(String, Vec<(&'static str, String)>)> {
+        let document = Html::parse_document(html_content);
+        let title = Self::extract_title(&document)?;
+        let form_data = Self::extract_form_data(&document, name)?;
 
-        Ok(element.inner_text(parser).to_string())
+        Ok((title, form_data))
     }
 
-    fn extract_session_cookie(response: &reqwest::Response) -> Result<String, ShindanError> {
+    fn extract_title(dom: &Html) -> Result<String> {
+        Ok(dom
+            .select(&Selector::parse("#shindanTitle").expect("Failed to parse selector"))
+            .next()
+            .context("Failed to get next element")?
+            .value().attr("data-shindan_title").context("Failed to get 'data-shindan_title' attribute")?.to_string())
+    }
+
+    fn extract_session_cookie(response: &reqwest::Response) -> Result<String> {
         response.cookies()
             .find(|cookie| cookie.name() == "_session")
             .map(|cookie| cookie.value().to_string())
-            .ok_or(ShindanError::SessionCookieNotFound)
+            .context("Failed to extract session cookie")
     }
 
     fn extract_form_data(
-        dom: &VDom,
+        dom: &Html,
         name: &str,
-    ) -> Result<Vec<(&'static str, String)>, ShindanError> {
-        const FIELDS: [&str; 4] = ["_token", "randname", "type", "shindan_token"];
-        let parser = dom.parser();
+    ) -> Result<Vec<(&'static str, String)>> {
+        const FIELDS: &[&str] = &["_token", "randname", "type"];
         let mut form_data = Vec::with_capacity(FIELDS.len() + 1);
 
-        let get_input_value = |field: &'static str| -> Result<String, ShindanError> {
-            let selector = format!("input[name=\"{}\"]", field);
-            let input = dom
-                .query_selector(&selector)
-                .ok_or_else(|| ShindanError::Parse(format!("Invalid selector: {}", selector)))?
+        for &field in FIELDS {
+            let selector = format!("input[name={field}]", field = field);
+            let value = dom.select(&Selector::parse(&selector).expect("Failed to parse selector"))
                 .next()
-                .ok_or_else(|| ShindanError::TokenNotFound(field))?;
+                .context("Failed to get next element")?
+                .value()
+                .attr("value")
+                .context("Failed to get value attribute")?;
 
-            let tag = input
-                .get(parser)
-                .ok_or_else(|| ShindanError::Parse("Failed to get element".into()))?
-                .as_tag()
-                .ok_or_else(|| ShindanError::Parse("Element is not a tag".into()))?;
-
-            let value = tag
-                .attributes()
-                .get("value")
-                .flatten()
-                .ok_or_else(|| ShindanError::TokenNotFound(field))?;
-
-            Ok(value.as_utf8_str().to_string())
-        };
-
-        for &field in &FIELDS {
-            match get_input_value(field) {
-                Ok(value) => form_data.push((field, value)),
-                Err(e) => return Err(e),
-            }
+            form_data.push((field, value.to_string()));
         }
 
         form_data.push(("user_input_value_1", name.to_string()));
@@ -210,7 +440,7 @@ impl ShindanClient {
         Ok(form_data)
     }
 
-    fn prepare_headers(&self, session_cookie: &str) -> Result<header::HeaderMap, ShindanError> {
+    fn prepare_headers(session_cookie: &str) -> Result<header::HeaderMap> {
         let mut headers = header::HeaderMap::new();
         headers.insert(
             header::CONTENT_TYPE,
@@ -220,41 +450,48 @@ impl ShindanClient {
         let cookie_value = format!("_session={};", session_cookie);
         headers.insert(
             header::COOKIE,
-            header::HeaderValue::from_str(&cookie_value)
-                .map_err(|_| ShindanError::Parse("Failed to create cookie header".into()))?,
+            header::HeaderValue::from_str(&cookie_value)?,
         );
 
         Ok(headers)
     }
 
-    fn parse_result(&self, dom: &VDom, title: String) -> Result<ShindanResult, ShindanError> {
-        let parser = dom.parser();
+    #[cfg(feature = "image")]
+    fn get_html_string(id: &str, response_text: &str) -> Result<String> {
+        let result_document = Html::parse_document(response_text);
 
-        let element = dom.get_element_by_id("post_display")
-            .expect("Failed to find element")
-            .get(parser)
-            .unwrap();
+        let title_and_result = result_document
+            .select(&Selector::parse("#title_and_result").expect("Failed to parse selector"))
+            .next()
+            .context("Failed to get next element")?
+            .html();
 
-        if let Tag(tag) = element {
-            let mut content = Vec::new();
-            for child in tag.children().all(parser) {
-                match child {
-                    Raw(bytes) => content.push(Segment::new("text", json!({
-                            "text": bytes.as_utf8_str().to_string().replace("&nbsp;", " ")
-                        }))),
-                    Tag(html_tag) if html_tag.name() == "br" => content.push(Segment::new("text", json!({
-                            "text": "\n".to_string()
-                        }))),
-                    Tag(html_tag) if html_tag.name() == "img" => content.push(Segment::new("image", json!({
-                            "file": html_tag.attributes().get("data-src").flatten().unwrap().as_utf8_str().to_string()
-                        }))),
-                    _ => {}
-                }
+        let mut html = HTML_TEMPLATE
+            .replace("<!-- TITLE_AND_RESULT -->", &title_and_result);
+
+        if response_text.contains("chart.js") {
+            let mut scripts = vec![
+                r#"<script src="https://cn.shindanmaker.com/js/app.js?id=163959a7e23bfa7264a0ddefb3c36f13" defer=""></script>"#,
+                r#"<script src="https://cn.shindanmaker.com/js/chart.js?id=391e335afc72362acd6bf1ea1ba6b74c" defer=""></script>"#];
+
+            let shindan_script = Self::get_first_script(&result_document, id)?;
+            scripts.push(&shindan_script);
+            html = html.replace("<!-- SCRIPTS -->", &scripts.join("\n"));
+        }
+        Ok(html)
+    }
+
+    #[cfg(feature = "image")]
+    fn get_first_script(result_document: &Html, id: &str) -> Result<String> {
+        let selector = Selector::parse("script").expect("Invalid script selector");
+
+        for element in result_document.select(&selector) {
+            let html = element.html();
+            if html.contains(id) {
+                return Ok(html);
             }
-
-            return Ok(ShindanResult::Text { title, content });
         }
 
-        Err(ShindanError::Parse("Failed to parse result".into()))
+        Err(anyhow!("Failed to find script with id {}", id))
     }
 }

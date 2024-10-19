@@ -11,54 +11,127 @@ A Rust library for interacting with [ShindanMaker](https://en.shindanmaker.com/)
 - Asynchronous API
 - Multi-domain support (JP, EN, CN, KR, TH)
 - Easy shindan submission and result parsing
+- Image result support (optional, headless browser required)
 
 ## Usage
 
 ```toml
 [dependencies]
-shindan-maker = "0.1.6"
+tokio = { version = "1", features = ["full"] }
+
+# For full functionality
+shindan-maker = { version = "0.1", features = ["full"] }
+
+# For text-only functionality
+# shindan-maker = "0.1"
+
+# For image functionality
+# shindan-maker = { version = "0.1", features = ["image"] }
 ```
 
 ## Example
 
+### Get the shindan title 
+
 ```rust
-use shindan_maker::{ShindanClient, ShindanDomain, ShindanResult, Segment};
 use std::error::Error;
+use shindan_maker::{ShindanClient, ShindanDomain};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    // Create a client for the English domain
     let client = ShindanClient::new(ShindanDomain::En)?;
 
-    // Shindan ID for "What kind of person will you turn out to be?"
     let shindan_id = "1221154";
 
-    // Get the shindan title
     let title = client.get_title(shindan_id).await?;
     println!("Shindan title: {}", title);
+}
+```
 
-    // Submit the shindan
-    let result = client.submit_shindan(shindan_id, "Rust").await?;
+### Get the text result
 
-    // Process the result
-    if let ShindanResult::Text { title, content } = result {
-        println!("Result title: {}", title);
-        println!("Result content: {:#?}", content);
+```rust
+use std::error::Error;
+use shindan_maker::{ShindanClient, ShindanDomain, ShindanResult, Segment, ShindanTextResult};
 
-        // Print text segments
-        for segment in content.iter().filter_map(|s| s.get_text()) {
-            println!("Text: {}", segment);
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    let client = ShindanClient::new(ShindanDomain::En)?;
+
+    let shindan_id = "1221154";
+
+    let text_result = client.get_text_result(shindan_id, "test_name").await?;
+
+    let ShindanTextResult { title, content } = text_result;
+
+    println!("Result title: {}", title);
+    println!("Result content: {:#?}", content);
+
+    Ok(())
+}
+```
+
+#### Parse the text result
+
+```rust
+use shindan_maker::{ShindanClient, ShindanDomain, ShindanResult, Segment, ShindanTextResult};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // ...
+
+    // Print the result content
+    let mut text = String::new();
+    for segment in content.iter() {
+        match segment.type_.as_str() {
+            "text" => {
+                text.push_str(&segment.get_text().unwrap());
+            }
+            "image" => {
+                text.push_str(&segment.get_image_url().unwrap());
+            }
+            _ => {}
         }
-
-        // Print image URLs
-        for segment in content.iter().filter_map(|s| s.get_image_url()) {
-            println!("Image URL: {}", segment);
-        }
-
-        // Example of using filter_segments_by_type
-        let text_segments: Vec<&Segment> = shindan_maker::filter_segments_by_type(&content, "text");
-        println!("Number of text segments: {}", text_segments.len());
     }
+    println!("Result text: {}", text);
+    
+    // Print text segments
+    for segment in content.iter().filter_map(|s| s.get_text()) {
+        println!("Text: {}", segment);
+    }
+
+    // Print image URLs
+    for segment in content.iter().filter_map(|s| s.get_image_url()) {
+        println!("Image URL: {}", segment);
+    }
+
+    // Example of using filter_segments_by_type
+    let text_segments: Vec<&Segment> = shindan_maker::filter_segments_by_type(&content, "text");
+    println!("Number of text segments: {}", text_segments.len());
+
+    Ok(())
+}
+```
+
+### Get the image result
+
+```rust
+use base64::Engine;
+use std::error::Error;
+use shindan_maker::{ShindanClient, ShindanDomain, ShindanImageResult};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    let client = ShindanClient::new(ShindanDomain::En)?.init_browser()?;
+
+    let shindan_id = "1221154";
+
+    let image_result = client.get_image_result(shindan_id, "test_name").await?;
+
+    let ShindanImageResult { title, base64 } = image_result;
+    
+    let png_data = base64::prelude::BASE64_STANDARD.decode(base64)?;
+    std::fs::write("test.png", png_data)?;
 
     Ok(())
 }
