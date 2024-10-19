@@ -52,16 +52,14 @@ Filters segments by type.
 use shindan_maker::{Segment, filter_segments_by_type};
 use serde_json::json;
 
-fn main() {
-    let segments = vec![
-        Segment::new("text", json!({"text": "Hello"})),
-        Segment::new("image", json!({"file": "image.jpg"})),
-        Segment::new("text", json!({"text": "World"})),
-    ];
+let segments = vec![
+    Segment::new("text", json!({"text": "Hello"})),
+    Segment::new("image", json!({"file": "image.jpg"})),
+    Segment::new("text", json!({"text": "World"})),
+];
 
-    let text_segments = filter_segments_by_type(&segments, "text");
-    assert_eq!(text_segments.len(), 2);
-}
+let text_segments = filter_segments_by_type(&segments, "text");
+assert_eq!(text_segments.len(), 2);
 ```
 */
 pub fn filter_segments_by_type<'a>(segments: &'a [Segment], type_: &str) -> Vec<&'a Segment> {
