@@ -31,7 +31,7 @@ shindan-maker = { version = "0.1", features = ["full"] }
 
 ## Example
 
-### Get the shindan title 
+### Get the shindan title
 
 ```rust
 use std::error::Error;
@@ -40,11 +40,9 @@ use shindan_maker::{ShindanClient, ShindanDomain};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let client = ShindanClient::new(ShindanDomain::En)?;
-
-    let shindan_id = "1221154";
-
-    let title = client.get_title(shindan_id).await?;
-    println!("Shindan title: {}", title);
+    let title = client.get_title("1218842").await?;
+    println!("Title: {}", title);
+    Ok(())
 }
 ```
 
@@ -52,18 +50,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 ```rust
 use std::error::Error;
-use shindan_maker::{ShindanClient, ShindanDomain, ShindanResult, Segment, ShindanTextResult};
+use shindan_maker::{ShindanClient, ShindanDomain, ShindanTextResult};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let client = ShindanClient::new(ShindanDomain::En)?;
+    let result = client.get_text_result("1218842", "test_user").await?;
 
-    let shindan_id = "1221154";
-
-    let text_result = client.get_text_result(shindan_id, "test_name").await?;
-
-    let ShindanTextResult { title, content } = text_result;
-
+    let ShindanTextResult { title, content } = result;
     println!("Result title: {}", title);
     println!("Result content: {:#?}", content);
 
@@ -71,16 +65,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 ```
 
-#### Parse the text result
+#### Printing text segments
 
 ```rust
-use shindan_maker::{ShindanClient, ShindanDomain, ShindanResult, Segment, ShindanTextResult};
+use shindan_maker::{ShindanClient, ShindanDomain, ShindanTextResult};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // ...
+    let client = ShindanClient::new(ShindanDomain::En)?;
+    let result = client.get_text_result("1218842", "test_user").await?;
 
-    // Print the result content
+    let ShindanTextResult { title, content } = result;
+
+    println!("Result title: {}", title);
+
     let mut text = String::new();
     for segment in content.iter() {
         match segment.type_.as_str() {
@@ -94,20 +92,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     println!("Result text: {}", text);
-    
-    // Print text segments
-    for segment in content.iter().filter_map(|s| s.get_text()) {
-        println!("Text: {}", segment);
-    }
 
-    // Print image URLs
-    for segment in content.iter().filter_map(|s| s.get_image_url()) {
-        println!("Image URL: {}", segment);
-    }
+    Ok(())
+}
+```
 
-    // Example of using filter_segments_by_type
-    let text_segments: Vec<&Segment> = shindan_maker::filter_segments_by_type(&content, "text");
-    println!("Number of text segments: {}", text_segments.len());
+#### Filtering segments by type
+
+```rust
+use shindan_maker::{ShindanClient, ShindanDomain, filter_segments_by_type};
+use serde_json::json;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = ShindanClient::new(ShindanDomain::En)?;
+    let result = client.get_text_result("1218842", "test_user").await?;
+
+    println!("Result title: {}", result.title);
+
+    let text_segments = filter_segments_by_type(&result.content, "text");
+    assert_eq!(text_segments.len(), 2);
 
     Ok(())
 }
@@ -116,21 +120,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Get the image result
 
 ```rust
-use base64::Engine;
 use std::error::Error;
-use shindan_maker::{ShindanClient, ShindanDomain, ShindanImageResult};
+use base64::Engine;
+use shindan_maker::{ShindanClient, ShindanDomain};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let client = ShindanClient::new(ShindanDomain::En)?.init_browser()?;
+    let result = client.get_image_result("1218842", "test_user").await?;
 
-    let shindan_id = "1221154";
+    println!("Result title: {}", result.title);
 
-    let image_result = client.get_image_result(shindan_id, "test_name").await?;
-
-    let ShindanImageResult { title, base64 } = image_result;
-    
-    let png_data = base64::prelude::BASE64_STANDARD.decode(base64)?;
+    let png_data = base64::prelude::BASE64_STANDARD.decode(result.base64)?;
     std::fs::write("test.png", png_data)?;
 
     Ok(())
