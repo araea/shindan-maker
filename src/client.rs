@@ -57,6 +57,35 @@ pub struct ShindanImageResult {
     pub base64: String,
 }
 
+#[derive(Clone)]
+struct Selectors {
+    post_display: Selector,
+    shindan_title: Selector,
+    #[cfg(feature = "image")]
+    title_and_result: Selector,
+    #[cfg(feature = "image")]
+    script: Selector,
+    form: Vec<Selector>,
+}
+
+impl Selectors {
+    fn new() -> Self {
+        Self {
+            post_display: Selector::parse("#post_display").expect("Invalid selector"),
+            shindan_title: Selector::parse("#shindanTitle").expect("Failed to parse selector"),
+            #[cfg(feature = "image")]
+            title_and_result: Selector::parse("#title_and_result").expect("Failed to parse selector"),
+            #[cfg(feature = "image")]
+            script: Selector::parse("script").expect("Invalid script selector"),
+            form: vec![
+                Selector::parse("input[name=_token]").expect("Failed to parse selector"),
+                Selector::parse("input[name=randname]").expect("Failed to parse selector"),
+                Selector::parse("input[name=type]").expect("Failed to parse selector"),
+            ],
+        }
+    }
+}
+
 /// A client for interacting with Shindan Maker.
 #[derive(Clone)]
 pub struct ShindanClient {
@@ -64,6 +93,7 @@ pub struct ShindanClient {
     #[cfg(feature = "image")]
     browser: Option<Browser>,
     domain: ShindanDomain,
+    selectors: Selectors,
 }
 
 const TIMEOUT_SECS: u64 = 3;
@@ -96,6 +126,7 @@ impl ShindanClient {
                 .build()?,
             #[cfg(feature = "image")]
             browser: None,
+            selectors: Selectors::new(),
         })
     }
 
@@ -119,6 +150,7 @@ impl ShindanClient {
     #[cfg(feature = "image")]
     pub fn init_browser(mut self) -> Result<Self> {
         let launch_options = LaunchOptions::default_builder()
+            .headless(true)
             .args(vec![
                 "--window-position=-2400,-2400".as_ref(),
             ])
@@ -165,7 +197,7 @@ impl ShindanClient {
             .await?;
 
         let document = Html::parse_document(&text);
-        Self::extract_title(&document)
+        self.extract_title(&document)
     }
 
     /**
@@ -260,7 +292,7 @@ impl ShindanClient {
 
         let mut content = Vec::new();
 
-        result_document.select(&Selector::parse("#post_display").expect("Invalid selector"))
+        result_document.select(&self.selectors.post_display)
             .next()
             .context("Failed to get next element")?
             .children()
@@ -334,7 +366,7 @@ impl ShindanClient {
 
         let (title, response_text) = self.get_title_and_init_res(id, name).await?;
 
-        let html = Self::get_html_string(id, &response_text)?;
+        let html = self.get_html_string(id, &response_text)?;
 
         let tab = self.browser
             .as_ref()
@@ -344,10 +376,10 @@ impl ShindanClient {
         let expression = format!("document.open();
             document.write(String.raw`{}`);
             document.close();", html);
-        tab.evaluate(&expression, false).context("Failed to evaluate expression")?;
+        tab.evaluate(&expression, true).context("Failed to evaluate expression")?;
         tab.wait_until_navigated()?;
 
-        let element = tab.find_element("#title_and_result")?;
+        let element = tab.wait_for_element("#title_and_result")?;
 
         let base64 = element.parent.call_method(Page::CaptureScreenshot {
             format: Some(Page::CaptureScreenshotFormatOption::Png),
@@ -378,7 +410,7 @@ impl ShindanClient {
             .text()
             .await?;
 
-        let (title, form_data) = Self::extract_title_and_form_data(&initial_response_text, name)?;
+        let (title, form_data) = self.extract_title_and_form_data(&initial_response_text, name)?;
 
         let headers = Self::prepare_headers(&session_cookie)?;
         let response_text = self.client
@@ -393,17 +425,17 @@ impl ShindanClient {
         Ok((title, response_text))
     }
 
-    fn extract_title_and_form_data(html_content: &str, name: &str) -> Result<(String, Vec<(&'static str, String)>)> {
+    fn extract_title_and_form_data(&self, html_content: &str, name: &str) -> Result<(String, Vec<(&'static str, String)>)> {
         let document = Html::parse_document(html_content);
-        let title = Self::extract_title(&document)?;
-        let form_data = Self::extract_form_data(&document, name)?;
+        let title = self.extract_title(&document)?;
+        let form_data = self.extract_form_data(&document, name)?;
 
         Ok((title, form_data))
     }
 
-    fn extract_title(dom: &Html) -> Result<String> {
+    fn extract_title(&self, dom: &Html) -> Result<String> {
         Ok(dom
-            .select(&Selector::parse("#shindanTitle").expect("Failed to parse selector"))
+            .select(&self.selectors.shindan_title)
             .next()
             .context("Failed to get next element")?
             .value().attr("data-shindan_title").context("Failed to get 'data-shindan_title' attribute")?.to_string())
@@ -417,15 +449,15 @@ impl ShindanClient {
     }
 
     fn extract_form_data(
+        &self,
         dom: &Html,
         name: &str,
     ) -> Result<Vec<(&'static str, String)>> {
         const FIELDS: &[&str] = &["_token", "randname", "type"];
         let mut form_data = Vec::with_capacity(FIELDS.len() + 1);
 
-        for &field in FIELDS {
-            let selector = format!("input[name={field}]", field = field);
-            let value = dom.select(&Selector::parse(&selector).expect("Failed to parse selector"))
+        for (index, &field) in FIELDS.iter().enumerate() {
+            let value = dom.select(&self.selectors.form[index])
                 .next()
                 .context("Failed to get next element")?
                 .value()
@@ -457,11 +489,11 @@ impl ShindanClient {
     }
 
     #[cfg(feature = "image")]
-    fn get_html_string(id: &str, response_text: &str) -> Result<String> {
+    fn get_html_string(&self, id: &str, response_text: &str) -> Result<String> {
         let result_document = Html::parse_document(response_text);
 
         let title_and_result = result_document
-            .select(&Selector::parse("#title_and_result").expect("Failed to parse selector"))
+            .select(&self.selectors.title_and_result)
             .next()
             .context("Failed to get next element")?
             .html();
@@ -474,7 +506,7 @@ impl ShindanClient {
                 r#"<script src="https://cn.shindanmaker.com/js/app.js?id=163959a7e23bfa7264a0ddefb3c36f13" defer=""></script>"#,
                 r#"<script src="https://cn.shindanmaker.com/js/chart.js?id=391e335afc72362acd6bf1ea1ba6b74c" defer=""></script>"#];
 
-            let shindan_script = Self::get_first_script(&result_document, id)?;
+            let shindan_script = self.get_first_script(&result_document, id)?;
             scripts.push(&shindan_script);
             html = html.replace("<!-- SCRIPTS -->", &scripts.join("\n"));
         }
@@ -482,10 +514,8 @@ impl ShindanClient {
     }
 
     #[cfg(feature = "image")]
-    fn get_first_script(result_document: &Html, id: &str) -> Result<String> {
-        let selector = Selector::parse("script").expect("Invalid script selector");
-
-        for element in result_document.select(&selector) {
+    fn get_first_script(&self, result_document: &Html, id: &str) -> Result<String> {
+        for element in result_document.select(&self.selectors.script) {
             let html = element.html();
             if html.contains(id) {
                 return Ok(html);
