@@ -8,7 +8,7 @@ categories = ["web-programming::http-client"]
 documentation = "https://docs.rs/shindan-maker"
 repository = "https://github.com/araea/shindan-maker"
 keywords = ["shindan", "shindanmaker", "shindan-maker", "fortune-tellings", "diagnosis"]
-description = "A Rust library for interacting with Shindan Maker, the popular personality quiz service."
+description = "A Rust library for interacting with ShindanMaker, the popular personality quiz service."
 
 [[example]]
 name = "get_title"
@@ -34,6 +34,7 @@ tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
 
 [features]
 default = ["segments"]
+full = ["segments", "html"]
 segments = []
 html = []
 

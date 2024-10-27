@@ -1,15 +1,18 @@
 /*!
+[![GitHub]](https://github.com/araea/shindan-maker)&ensp;[![crates-io]](https://crates.io/crates/shindan-maker)&ensp;[![docs-rs]](crate)
+
 [GitHub]: https://img.shields.io/badge/github-8da0cb?style=for-the-badge&labelColor=555555&logo=github
 [crates-io]: https://img.shields.io/badge/crates.io-fc8d62?style=for-the-badge&labelColor=555555&logo=rust
 [docs-rs]: https://img.shields.io/badge/docs.rs-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs
 
 <br>
 
-A Rust library for interacting with Shindan Maker.
+A Rust library for interacting with [ShindanMaker].
 
-This library provides functionality to interact with various Shindan Maker domains, submit shindans, and parse results.
+This library provides functionality to interact with various ShindanMaker domains, submit shindans, and parse results.
+
+[ShindanMaker]: https://en.shindanmaker.com/
 */
-
 mod client;
 #[cfg(feature = "segments")]
 mod segment;

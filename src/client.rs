@@ -14,7 +14,7 @@ use anyhow::anyhow;
 #[cfg(feature = "html")]
 use crate::html_template::HTML_TEMPLATE;
 
-/// A domain of Shindan Maker.
+/// A domain of ShindanMaker.
 #[derive(Debug, Clone, Copy)]
 pub enum ShindanDomain {
     Jp,
@@ -73,7 +73,7 @@ impl Selectors {
     }
 }
 
-/// A client for interacting with Shindan Maker.
+/// A client for interacting with ShindanMaker.
 #[derive(Clone)]
 pub struct ShindanClient {
     client: Client,
@@ -85,13 +85,13 @@ const TIMEOUT_SECS: u64 = 3;
 
 impl ShindanClient {
     /**
-    Create a new Shindan Maker client.
+    Create a new ShindanMaker client.
 
     # Arguments
-    - `domain` - The domain of Shindan Maker to use.
+    - `domain` - The domain of ShindanMaker to use.
 
     # Returns
-    A new Shindan Maker client.
+    A new ShindanMaker client.
 
     # Examples
     ```
