@@ -1,8 +1,8 @@
-use std::error::Error;
+use anyhow::Result;
 use shindan_maker::{ShindanClient, ShindanDomain};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<()> {
     const SHINDAN_ID: &str = "1222992";
     const USER_NAME: &str = "test_user";
 
@@ -11,8 +11,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .get_segments_with_title(SHINDAN_ID, USER_NAME)
         .await?;
 
-    println!("Result title: {}", title);
     println!("Result segments: {:#?}", segments);
+
+    println!("Result title: {}", title);
     println!("Result text: {}", segments);
 
     Ok(())

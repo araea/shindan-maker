@@ -1,10 +1,10 @@
-use std::error::Error;
 use std::fs;
+use anyhow::Result;
 use std::path::Path;
 use shindan_maker::{ShindanClient, ShindanDomain};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<()> {
     const SHINDAN_ID: &str = "1222992";
     const USER_NAME: &str = "test_user";
     const OUTPUT_FILE: &str = "shindan.html";
@@ -25,7 +25,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn save_to_file(content: &str, filename: &str) -> Result<(), Box<dyn Error>> {
+fn save_to_file(content: &str, filename: &str) -> Result<()> {
     fs::write(filename, content)?;
     println!("Content saved to {}", filename);
     Ok(())

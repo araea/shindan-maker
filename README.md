@@ -19,8 +19,8 @@ A Rust library for interacting with [ShindanMaker](https://en.shindanmaker.com/)
 tokio = { version = "1", features = ["full"] }
 
 # default features: ["segments"]
-# optional features: ["html"]
-shindan-maker = { version = "0.1", features = ["segments", "html"] }
+# optional features: ["html", "full"] ("full" = "segments" + "html")
+shindan-maker = { version = "0.1", features = ["segments"] }
 ```
 
 ## Example
@@ -38,7 +38,7 @@ async fn main() {
 }
 ```
 
-### Get segments (segments feature)
+### Get segments (need "segments" feature)
 
 ```rust
 use shindan_maker::{ShindanClient, ShindanDomain};
@@ -55,7 +55,7 @@ async fn main() {
 }
 ```
 
-### Get HTML string (HTML feature)
+### Get HTML string (need "html" feature)
 
 ```rust
 use shindan_maker::{ShindanClient, ShindanDomain};

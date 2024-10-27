@@ -1,18 +1,19 @@
 use std::fmt;
-use std::fmt::{Debug, Formatter};
-use std::time::Duration;
-use reqwest::{header, Client};
 use serde_json::json;
+use std::time::Duration;
 use anyhow::{Context, Result};
+use reqwest::{header, Client};
+use std::fmt::{Debug, Formatter};
 use scraper::{Html, Node, Selector};
 
 #[cfg(feature = "segments")]
 use crate::segment::{Segment, Segments};
 
 #[cfg(feature = "html")]
-use anyhow::anyhow;
-#[cfg(feature = "html")]
-use crate::html_template::HTML_TEMPLATE;
+use {
+    anyhow::anyhow,
+    crate::html_template::HTML_TEMPLATE,
+};
 
 /// A domain of ShindanMaker.
 #[derive(Debug, Clone, Copy)]
@@ -39,8 +40,8 @@ impl fmt::Display for ShindanDomain {
 
 #[derive(Clone)]
 struct Selectors {
-    form: Vec<Selector>,
     shindan_title: Selector,
+    form: Vec<Selector>,
 
     #[cfg(feature = "segments")]
     post_display: Selector,
@@ -55,6 +56,11 @@ impl Selectors {
     fn new() -> Self {
         Self {
             shindan_title: Selector::parse("#shindanTitle").expect("Failed to parse selector"),
+            form: vec![
+                Selector::parse("input[name=_token]").expect("Failed to parse selector"),
+                Selector::parse("input[name=randname]").expect("Failed to parse selector"),
+                Selector::parse("input[name=type]").expect("Failed to parse selector"),
+            ],
 
             #[cfg(feature = "segments")]
             post_display: Selector::parse("#post_display").expect("Invalid selector"),
@@ -63,12 +69,6 @@ impl Selectors {
             title_and_result: Selector::parse("#title_and_result").expect("Failed to parse selector"),
             #[cfg(feature = "html")]
             script: Selector::parse("script").expect("Invalid script selector"),
-
-            form: vec![
-                Selector::parse("input[name=_token]").expect("Failed to parse selector"),
-                Selector::parse("input[name=randname]").expect("Failed to parse selector"),
-                Selector::parse("input[name=type]").expect("Failed to parse selector"),
-            ],
         }
     }
 }
@@ -80,8 +80,6 @@ pub struct ShindanClient {
     domain: ShindanDomain,
     selectors: Selectors,
 }
-
-const TIMEOUT_SECS: u64 = 3;
 
 impl ShindanClient {
     /**
@@ -101,6 +99,8 @@ impl ShindanClient {
     ```
     */
     pub fn new(domain: ShindanDomain) -> Result<Self> {
+        const TIMEOUT_SECS: u64 = 3;
+
         Ok(Self {
             domain,
             client: Client::builder()
@@ -146,7 +146,10 @@ impl ShindanClient {
         let document = Html::parse_document(&text);
         self.extract_title(&document)
     }
+}
 
+#[cfg(feature = "segments")]
+impl ShindanClient {
     /**
     Get the segments of a shindan.
 
@@ -173,7 +176,6 @@ impl ShindanClient {
     }
     ```
     */
-    #[cfg(feature = "segments")]
     pub async fn get_segments_with_title(
         &self,
         id: &str,
@@ -181,6 +183,12 @@ impl ShindanClient {
     ) -> Result<(Segments, String)> {
         let (title, response_text) = self.get_title_and_init_res(id, name).await?;
 
+        let segments = self.get_segments(&response_text)?;
+
+        Ok((segments, title))
+    }
+
+    fn get_segments(&self, response_text: &String) -> Result<Segments> {
         let result_document = Html::parse_document(&response_text);
 
         let mut segments = Vec::new();
@@ -215,9 +223,12 @@ impl ShindanClient {
                 }
             });
 
-        Ok((Segments(segments), title))
+        Ok(Segments(segments))
     }
+}
 
+#[cfg(feature = "html")]
+impl ShindanClient {
     /**
     Get the HTML string of a shindan.
 
@@ -240,7 +251,6 @@ impl ShindanClient {
     }
     ```
     */
-    #[cfg(feature = "html")]
     pub async fn get_html_str_with_title(
         &self,
         id: &str,
@@ -248,11 +258,48 @@ impl ShindanClient {
     ) -> Result<(String, String)> {
         let (title, response_text) = self.get_title_and_init_res(id, name).await?;
 
-        let html = self.get_html_string(id, &response_text)?;
+        let html = self.get_html_str(id, &response_text)?;
 
         Ok((html, title))
     }
 
+    fn get_html_str(&self, id: &str, response_text: &str) -> Result<String> {
+        let result_document = Html::parse_document(response_text);
+
+        let title_and_result = result_document
+            .select(&self.selectors.title_and_result)
+            .next()
+            .context("Failed to get the next element")?
+            .html();
+
+        let mut html = HTML_TEMPLATE
+            .replace("<!-- TITLE_AND_RESULT -->", &title_and_result);
+
+        if response_text.contains("chart.js") {
+            let mut scripts = vec![
+                r#"<script src="https://cn.shindanmaker.com/js/app.js?id=163959a7e23bfa7264a0ddefb3c36f13" defer=""></script>"#,
+                r#"<script src="https://cn.shindanmaker.com/js/chart.js?id=391e335afc72362acd6bf1ea1ba6b74c" defer=""></script>"#];
+
+            let shindan_script = self.get_first_script(&result_document, id)?;
+            scripts.push(&shindan_script);
+            html = html.replace("<!-- SCRIPTS -->", &scripts.join("\n"));
+        }
+        Ok(html)
+    }
+
+    fn get_first_script(&self, result_document: &Html, id: &str) -> Result<String> {
+        for element in result_document.select(&self.selectors.script) {
+            let html = element.html();
+            if html.contains(id) {
+                return Ok(html);
+            }
+        }
+
+        Err(anyhow!("Failed to find script with id {}", id))
+    }
+}
+
+impl ShindanClient {
     async fn get_title_and_init_res(&self, id: &str, name: &str) -> Result<(String, String)> {
         let url = format!("{}{}", self.domain, id);
         let initial_response = self.client
@@ -280,6 +327,13 @@ impl ShindanClient {
         Ok((title, response_text))
     }
 
+    fn extract_session_cookie(response: &reqwest::Response) -> Result<String> {
+        response.cookies()
+            .find(|cookie| cookie.name() == "_session")
+            .map(|cookie| cookie.value().to_string())
+            .context("Failed to extract session cookie")
+    }
+
     fn extract_title_and_form_data(&self, html_content: &str, name: &str) -> Result<(String, Vec<(&'static str, String)>)> {
         let document = Html::parse_document(html_content);
         let title = self.extract_title(&document)?;
@@ -296,13 +350,6 @@ impl ShindanClient {
             .value().attr("data-shindan_title")
             .context("Failed to get 'data-shindan_title' attribute")?
             .to_string())
-    }
-
-    fn extract_session_cookie(response: &reqwest::Response) -> Result<String> {
-        response.cookies()
-            .find(|cookie| cookie.name() == "_session")
-            .map(|cookie| cookie.value().to_string())
-            .context("Failed to extract session cookie")
     }
 
     fn extract_form_data(
@@ -343,42 +390,5 @@ impl ShindanClient {
         );
 
         Ok(headers)
-    }
-
-    #[cfg(feature = "html")]
-    fn get_html_string(&self, id: &str, response_text: &str) -> Result<String> {
-        let result_document = Html::parse_document(response_text);
-
-        let title_and_result = result_document
-            .select(&self.selectors.title_and_result)
-            .next()
-            .context("Failed to get the next element")?
-            .html();
-
-        let mut html = HTML_TEMPLATE
-            .replace("<!-- TITLE_AND_RESULT -->", &title_and_result);
-
-        if response_text.contains("chart.js") {
-            let mut scripts = vec![
-                r#"<script src="https://cn.shindanmaker.com/js/app.js?id=163959a7e23bfa7264a0ddefb3c36f13" defer=""></script>"#,
-                r#"<script src="https://cn.shindanmaker.com/js/chart.js?id=391e335afc72362acd6bf1ea1ba6b74c" defer=""></script>"#];
-
-            let shindan_script = self.get_first_script(&result_document, id)?;
-            scripts.push(&shindan_script);
-            html = html.replace("<!-- SCRIPTS -->", &scripts.join("\n"));
-        }
-        Ok(html)
-    }
-
-    #[cfg(feature = "html")]
-    fn get_first_script(&self, result_document: &Html, id: &str) -> Result<String> {
-        for element in result_document.select(&self.selectors.script) {
-            let html = element.html();
-            if html.contains(id) {
-                return Ok(html);
-            }
-        }
-
-        Err(anyhow!("Failed to find script with id {}", id))
     }
 }

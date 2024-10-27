@@ -1,8 +1,8 @@
-use std::error::Error;
+use anyhow::Result;
 use shindan_maker::{ShindanClient, ShindanDomain};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<()> {
     const SHINDAN_ID: &str = "1222992";
 
     let client = ShindanClient::new(ShindanDomain::En)?;
@@ -11,5 +11,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .await?;
 
     println!("Title: {}", title);
+
     Ok(())
 }

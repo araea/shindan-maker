@@ -1,4 +1,3 @@
-#[cfg(feature = "html")]
 pub const HTML_TEMPLATE: &str = r#"<!DOCTYPE html>
 
 <html lang="en">

@@ -13,6 +13,7 @@ This library provides functionality to interact with various ShindanMaker domain
 
 [ShindanMaker]: https://en.shindanmaker.com/
 */
+
 mod client;
 #[cfg(feature = "segments")]
 mod segment;
@@ -20,7 +21,6 @@ mod segment;
 mod html_template;
 
 pub use client::{ShindanClient, ShindanDomain};
-
 #[cfg(feature = "segments")]
 pub use segment::Segment;
 
@@ -32,7 +32,12 @@ mod tests {
     #[tokio::test]
     async fn test_get_title() {
         let client = ShindanClient::new(ShindanDomain::En).unwrap();
-        let title = client.get_title("1222992").await.unwrap();
+
+        let title = client.
+            get_title("1222992")
+            .await
+            .unwrap();
+
         assert_eq!("Reincarnation.", title);
     }
 
@@ -40,7 +45,12 @@ mod tests {
     #[tokio::test]
     async fn test_get_segments() {
         let client = ShindanClient::new(ShindanDomain::En).unwrap();
-        let (_segments, title) = client.get_segments_with_title("1222992", "test_user").await.unwrap();
+
+        let (_segments, title) = client
+            .get_segments_with_title("1222992", "test_user")
+            .await
+            .unwrap();
+
         assert_eq!("Reincarnation.", title);
     }
 
@@ -48,7 +58,12 @@ mod tests {
     #[tokio::test]
     async fn test_get_html_str() {
         let client = ShindanClient::new(ShindanDomain::En).unwrap();
-        let (_html_str, title) = client.get_html_str_with_title("1222992", "test_user").await.unwrap();
+
+        let (_html_str, title) = client
+            .get_html_str_with_title("1222992", "test_user")
+            .await
+            .unwrap();
+
         assert_eq!("Reincarnation.", title);
     }
 }

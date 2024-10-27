@@ -5,7 +5,6 @@ use std::fmt::Formatter;
 use serde::{Deserialize, Serialize};
 
 /// A segment of a shindan result.
-#[cfg(feature = "segments")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Segment {
     #[serde(rename = "type")]
@@ -13,7 +12,6 @@ pub struct Segment {
     pub data: Value,
 }
 
-#[cfg(feature = "segments")]
 impl Segment {
     /**
     Create a new segment.
@@ -65,22 +63,18 @@ impl Segment {
     }
 }
 
-#[cfg(feature = "segments")]
 impl PartialEq for Segment {
     fn eq(&self, other: &Self) -> bool {
         self.type_ == other.type_ && self.data == other.data
     }
 }
 
-#[cfg(feature = "segments")]
 impl Eq for Segment {}
 
 /// A collection of segments.
-#[cfg(feature = "segments")]
 #[derive(Debug, Clone)]
 pub struct Segments(pub Vec<Segment>);
 
-#[cfg(feature = "segments")]
 impl Deref for Segments {
     type Target = Vec<Segment>;
 
@@ -89,7 +83,6 @@ impl Deref for Segments {
     }
 }
 
-#[cfg(feature = "segments")]
 impl fmt::Display for Segments {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let str = self.iter()
