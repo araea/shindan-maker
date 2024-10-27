@@ -11,42 +11,41 @@ This library provides functionality to interact with various Shindan Maker domai
 */
 
 mod client;
+#[cfg(feature = "segments")]
 mod segment;
-#[cfg(feature = "image")]
+#[cfg(feature = "html")]
 mod html_template;
 
-pub use client::{ShindanClient, ShindanDomain, ShindanTextResult};
-pub use segment::{Segment, filter_segments_by_type};
-#[cfg(feature = "image")]
-pub use client::ShindanImageResult;
+pub use client::{ShindanClient, ShindanDomain};
+
+#[cfg(feature = "segments")]
+pub use segment::Segment;
 
 #[cfg(test)]
 mod tests {
-    use tokio;
     use super::client::{ShindanClient, ShindanDomain};
+    use tokio;
 
     #[tokio::test]
-    async fn test_get_title() -> Result<(), Box<dyn std::error::Error>> {
-        let client = ShindanClient::new(ShindanDomain::En)?;
-        let result = client.get_title("1221154").await?;
-        assert_eq!("What kind of a person will you turn out to be?", result);
-        Ok(())
+    async fn test_get_title() {
+        let client = ShindanClient::new(ShindanDomain::En).unwrap();
+        let title = client.get_title("1222992").await.unwrap();
+        assert_eq!("Reincarnation.", title);
     }
 
+    #[cfg(feature = "segments")]
     #[tokio::test]
-    async fn test_get_text_result() -> Result<(), Box<dyn std::error::Error>> {
-        let client = ShindanClient::new(ShindanDomain::En)?;
-        let result = client.get_text_result("1221154", "test_user").await?;
-        assert_eq!("What kind of a person will you turn out to be?", result.title);
-        Ok(())
+    async fn test_get_segments() {
+        let client = ShindanClient::new(ShindanDomain::En).unwrap();
+        let (_segments, title) = client.get_segments_with_title("1222992", "test_user").await.unwrap();
+        assert_eq!("Reincarnation.", title);
     }
 
-    #[cfg(feature = "image")]
+    #[cfg(feature = "html")]
     #[tokio::test]
-    async fn test_get_image_result()-> Result<(), Box<dyn std::error::Error>> {
-        let client = ShindanClient::new(ShindanDomain::En)?.init_browser()?;
-        let result = client.get_image_result("1221154", "test_user").await?;
-        assert_eq!("What kind of a person will you turn out to be?", result.title);
-        Ok(())
+    async fn test_get_html_str() {
+        let client = ShindanClient::new(ShindanDomain::En).unwrap();
+        let (_html_str, title) = client.get_html_str_with_title("1222992", "test_user").await.unwrap();
+        assert_eq!("Reincarnation.", title);
     }
 }

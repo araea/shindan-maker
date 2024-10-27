@@ -1,7 +1,11 @@
-use serde::{Deserialize, Serialize};
+use std::fmt;
+use std::ops::Deref;
 use serde_json::Value;
+use std::fmt::Formatter;
+use serde::{Deserialize, Serialize};
 
-/// Represents a segment of a Shindan result.
+/// A segment of a shindan result.
+#[cfg(feature = "segments")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Segment {
     #[serde(rename = "type")]
@@ -9,8 +13,26 @@ pub struct Segment {
     pub data: Value,
 }
 
-/// Creates a new Segment.
+#[cfg(feature = "segments")]
 impl Segment {
+    /**
+    Create a new segment.
+
+    # Arguments
+    - `type_` - The type of the segment.
+    - `data` - The data of the segment.
+
+    # Returns
+    A new segment.
+
+    # Examples
+    ```
+    use serde_json::json;
+    use shindan_maker::Segment;
+
+    let segment = Segment::new("text", json!({"text": "Hello, world!"}));
+    ```
+    */
     pub fn new(type_: &str, data: Value) -> Self {
         Segment {
             type_: type_.to_string(),
@@ -18,53 +40,62 @@ impl Segment {
         }
     }
 
-    /// Gets the text content if the segment is of type "text".
-    pub fn get_text(&self) -> Option<String> {
-        if self.type_ != "text" { return None; }
-        self.data.as_object()
-            .and_then(|map| map.get("text"))
-            .and_then(Value::as_str)
-            .map(String::from)
-    }
+    /**
+    Get the string representation of the segment.
 
-    /// Gets the image URL if the segment is of type "image".
-    pub fn get_image_url(&self) -> Option<String> {
-        if self.type_ != "image" { return None; }
-        self.data.as_object()
-            .and_then(|map| map.get("file"))
-            .and_then(Value::as_str)
-            .map(String::from)
+    # Returns
+    - `Some(String)`: The string representation of the segment.
+    - `None`: If the segment type is not text or image.
+
+    # Examples
+    ```
+    use serde_json::json;
+    use shindan_maker::Segment;
+
+    let segment = Segment::new("text", json!({"text": "Hello, world!"}));
+    assert_eq!(segment.get_str(), Some("Hello, world!".to_string()));
+    ```
+    */
+    pub fn get_str(&self) -> Option<String> {
+        match self.type_.as_str() {
+            "text" => self.data.as_object().and_then(|map| map.get("text")).and_then(Value::as_str).map(String::from),
+            "image" => self.data.as_object().and_then(|map| map.get("file")).and_then(Value::as_str).map(String::from),
+            _ => None,
+        }
     }
 }
 
+#[cfg(feature = "segments")]
 impl PartialEq for Segment {
     fn eq(&self, other: &Self) -> bool {
         self.type_ == other.type_ && self.data == other.data
     }
 }
 
-/**
-Filters segments by type.
+#[cfg(feature = "segments")]
+impl Eq for Segment {}
 
-# Examples
+/// A collection of segments.
+#[cfg(feature = "segments")]
+#[derive(Debug, Clone)]
+pub struct Segments(pub Vec<Segment>);
 
-```
-use shindan_maker::{Segment, filter_segments_by_type};
-use serde_json::json;
+#[cfg(feature = "segments")]
+impl Deref for Segments {
+    type Target = Vec<Segment>;
 
-let segments = vec![
-    Segment::new("text", json!({"text": "Hello"})),
-    Segment::new("image", json!({"file": "image.jpg"})),
-    Segment::new("text", json!({"text": "World"})),
-];
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
-let text_segments = filter_segments_by_type(&segments, "text");
-assert_eq!(text_segments.len(), 2);
-```
-*/
-pub fn filter_segments_by_type<'a>(segments: &'a [Segment], type_: &str) -> Vec<&'a Segment> {
-    segments
-        .iter()
-        .filter(|segment| segment.type_ == type_)
-        .collect()
+#[cfg(feature = "segments")]
+impl fmt::Display for Segments {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let str = self.iter()
+            .map(|segment| segment.get_str().unwrap())
+            .collect::<Vec<String>>()
+            .join("");
+        write!(f, "{}", str)
+    }
 }
