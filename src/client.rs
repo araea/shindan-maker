@@ -188,8 +188,8 @@ impl ShindanClient {
         Ok((segments, title))
     }
 
-    fn get_segments(&self, response_text: &String) -> Result<Segments> {
-        let result_document = Html::parse_document(&response_text);
+    fn get_segments(&self, response_text: &str) -> Result<Segments> {
+        let result_document = Html::parse_document(response_text);
 
         let mut segments = Vec::new();
 
