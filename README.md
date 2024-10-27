@@ -19,7 +19,7 @@ A Rust library for interacting with [ShindanMaker](https://en.shindanmaker.com/)
 tokio = { version = "1", features = ["full"] }
 
 # default features: ["segments"]
-# optional features: ["html", "full"] ("full" = "segments" + "html")
+# optional features: ["html"], ["full"](segments + html)
 shindan-maker = { version = "0.1", features = ["segments"] }
 ```
 
