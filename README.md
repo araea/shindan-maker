@@ -6,9 +6,7 @@
 
 A Rust library for interacting with [ShindanMaker](https://en.shindanmaker.com/), the popular personality quiz service.
 
-## Features
-
-- Asynchronous API
+- Asynchronous API (Tokio)
 - Multi-domain support (JP, EN, CN, KR, TH)
 - Easy shindan submission and result parsing
 
@@ -18,7 +16,7 @@ A Rust library for interacting with [ShindanMaker](https://en.shindanmaker.com/)
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 
-# default features: ["segments"]
+# default feature: ["segments"]
 # optional features: ["html"], ["full"](segments + html)
 shindan-maker = { version = "0.1", features = ["segments"] }
 ```
@@ -33,7 +31,12 @@ use shindan_maker::{ShindanClient, ShindanDomain};
 #[tokio::main]
 async fn main() {
     let client = ShindanClient::new(ShindanDomain::En).unwrap();
-    let title = client.get_title("1222992").await.unwrap();
+    
+    let title = client
+        .get_title("1222992")
+        .await
+        .unwrap();
+    
     assert_eq!("Reincarnation.", title);
 }
 ```
@@ -46,12 +49,18 @@ use shindan_maker::{ShindanClient, ShindanDomain};
 #[tokio::main]
 async fn main() {
     let client = ShindanClient::new(ShindanDomain::En).unwrap();
-    let (segments, title) = client.get_segments_with_title("1222992", "test_user").await.unwrap();
+    
+    let (segments, title) = client
+        .get_segments_with_title("1222992", "test_user")
+        .await
+        .unwrap();
+    
     assert_eq!("Reincarnation.", title);
 
     println!("Result title: {}", title);
-    println!("Result segments: {:#?}", segments);
     println!("Result text: {}", segments);
+    
+    println!("Result segments: {:#?}", segments);
 }
 ```
 
@@ -63,7 +72,12 @@ use shindan_maker::{ShindanClient, ShindanDomain};
 #[tokio::main]
 async fn main() {
     let client = ShindanClient::new(ShindanDomain::En).unwrap();
-    let (_html_str, title) = client.get_html_str_with_title("1222992", "test_user").await.unwrap();
+    
+    let (_html_str, title) = client
+        .get_html_str_with_title("1222992", "test_user")
+        .await
+        .unwrap();
+    
     assert_eq!("Reincarnation.", title);
 }
 ```
