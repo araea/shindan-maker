@@ -37,7 +37,7 @@ async fn main() {
         .await
         .unwrap();
     
-    assert_eq!("Reincarnation.", title);
+    assert_eq!("Fantasy Stats", title);
 }
 ```
 
@@ -55,7 +55,7 @@ async fn main() {
         .await
         .unwrap();
     
-    assert_eq!("Reincarnation.", title);
+    assert_eq!("Fantasy Stats", title);
 
     println!("Result title: {}", title);
     println!("Result text: {}", segments);
@@ -78,7 +78,7 @@ async fn main() {
         .await
         .unwrap();
     
-    assert_eq!("Reincarnation.", title);
+    assert_eq!("Fantasy Stats", title);
 }
 ```
 

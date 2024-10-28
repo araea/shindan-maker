@@ -15,6 +15,9 @@ This library provides functionality to interact with various ShindanMaker domain
 */
 
 mod client;
+mod selectors;
+mod html_utils;
+mod http_utils;
 #[cfg(feature = "segments")]
 mod segment;
 #[cfg(feature = "html")]
@@ -38,7 +41,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!("Reincarnation.", title);
+        assert_eq!("Fantasy Stats", title);
     }
 
     #[cfg(feature = "segments")]
@@ -51,7 +54,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!("Reincarnation.", title);
+        assert_eq!("Fantasy Stats", title);
     }
 
     #[cfg(feature = "html")]
@@ -64,6 +67,6 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!("Reincarnation.", title);
+        assert_eq!("Fantasy Stats", title);
     }
 }
