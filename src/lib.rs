@@ -11,7 +11,72 @@ A Rust library for interacting with [ShindanMaker].
 
 This library provides functionality to interact with various ShindanMaker domains, submit shindans, and parse results.
 
+- Asynchronous API (Tokio)
+- Multi-domain support (JP, EN, CN, KR, TH)
+- Easy shindan submission and result parsing
+
 [ShindanMaker]: https://en.shindanmaker.com/
+
+## Example
+
+### Get title
+
+```rust
+use shindan_maker::{ShindanClient, ShindanDomain};
+
+#[tokio::main]
+async fn main() {
+    let client = ShindanClient::new(ShindanDomain::En).unwrap();
+
+    let title = client
+        .get_title("1222992")
+        .await
+        .unwrap();
+
+    assert_eq!("Fantasy Stats", title);
+}
+```
+
+### Get segments (need "segments" feature)
+
+```rust
+use shindan_maker::{ShindanClient, ShindanDomain};
+
+#[tokio::main]
+async fn main() {
+    let client = ShindanClient::new(ShindanDomain::En).unwrap();
+
+    let (segments, title) = client
+        .get_segments_with_title("1222992", "test_user")
+        .await
+        .unwrap();
+
+    assert_eq!("Fantasy Stats", title);
+
+    println!("Result title: {}", title);
+    println!("Result text: {}", segments);
+
+    println!("Result segments: {:#?}", segments);
+}
+```
+
+### Get HTML string (need "html" feature)
+
+```rust
+use shindan_maker::{ShindanClient, ShindanDomain};
+
+#[tokio::main]
+async fn main() {
+    let client = ShindanClient::new(ShindanDomain::En).unwrap();
+
+    let (_html_str, title) = client
+        .get_html_str_with_title("1222992", "test_user")
+        .await
+        .unwrap();
+
+    assert_eq!("Fantasy Stats", title);
+}
+```
 */
 
 mod client;
