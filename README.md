@@ -14,8 +14,6 @@ A Rust library for interacting with [ShindanMaker](https://en.shindanmaker.com/)
 
 ```toml
 [dependencies]
-tokio = { version = "1", features = ["full"] }
-
 # default feature: ["segments"]
 # optional features: ["html"], ["full"](segments + html)
 shindan-maker = { version = "0.1", features = ["segments"] }
