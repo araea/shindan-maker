@@ -1,7 +1,6 @@
 use std::fmt;
 use std::ops::Deref;
 use serde_json::Value;
-use std::fmt::Formatter;
 use serde::{Deserialize, Serialize};
 
 /// A segment of a shindan result.
@@ -84,7 +83,7 @@ impl Deref for Segments {
 }
 
 impl fmt::Display for Segments {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let str = self.iter()
             .map(|segment| segment.get_str().unwrap())
             .collect::<Vec<String>>()

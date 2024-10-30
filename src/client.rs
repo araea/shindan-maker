@@ -5,7 +5,6 @@ use reqwest::Client;
 use crate::http_utils;
 use crate::html_utils;
 use std::time::Duration;
-use std::fmt::{Debug, Formatter};
 
 #[cfg(feature = "segments")]
 use crate::segment::Segments;
@@ -21,7 +20,7 @@ pub enum ShindanDomain {
 }
 
 impl fmt::Display for ShindanDomain {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let url = match self {
             Self::Jp => "https://shindanmaker.com/",
             Self::En => "https://en.shindanmaker.com/",
@@ -85,7 +84,12 @@ impl ShindanClient {
     #[tokio::main]
     async fn main() {
         let client = ShindanClient::new(ShindanDomain::En).unwrap();
-        let title = client.get_title("1222992").await.unwrap();
+
+        let title = client
+            .get_title("1222992")
+            .await
+            .unwrap();
+
         assert_eq!("Fantasy Stats", title);
     }
     ```
@@ -150,12 +154,18 @@ impl ShindanClient {
     #[tokio::main]
     async fn main() {
         let client = ShindanClient::new(ShindanDomain::En).unwrap();
-        let (segments, title) = client.get_segments_with_title("1222992", "test_user").await.unwrap();
+
+        let (segments, title) = client
+            .get_segments_with_title("1222992", "test_user")
+            .await
+            .unwrap();
+
         assert_eq!("Fantasy Stats", title);
 
         println!("Result title: {}", title);
-        println!("Result segments: {:#?}", segments);
         println!("Result text: {}", segments);
+
+        println!("Result segments: {:#?}", segments);
     }
     ```
     */
@@ -189,7 +199,12 @@ impl ShindanClient {
     #[tokio::main]
     async fn main() {
         let client = ShindanClient::new(ShindanDomain::En).unwrap();
-        let (_html_str, title) = client.get_html_str_with_title("1222992", "test_user").await.unwrap();
+        
+        let (_html_str, title) = client
+            .get_html_str_with_title("1222992", "test_user")
+            .await
+            .unwrap();
+
         assert_eq!("Fantasy Stats", title);
     }
     ```
