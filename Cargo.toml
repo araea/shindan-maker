@@ -25,8 +25,8 @@ path = "examples/get_html_str.rs"
 required-features = ["html"]
 
 [[example]]
-name = "html_to_png"
-path = "examples/html_to_png.rs"
+name = "html_to_img"
+path = "examples/html_to_img.rs"
 required-features = ["html"]
 
 [dependencies]
