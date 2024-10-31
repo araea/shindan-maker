@@ -16,7 +16,7 @@ async fn main() -> Result<()> {
 
     println!("Result title: {}", title);
 
-    let browser = Browser::new_with_head().await?;
+    let browser = Browser::new().await?;
     let base64 = browser.capture_html(&html_str, "#title_and_result").await?;
 
     let img_data = base64::prelude::BASE64_STANDARD.decode(base64)?;
