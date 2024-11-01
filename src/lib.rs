@@ -62,6 +62,8 @@ async fn main() {
 
 ### Get HTML string (need "html" feature)
 
+- HTML string to image: [cdp-html-shot](https://crates.io/crates/cdp-html-shot).
+
 ```rust
 use shindan_maker::{ShindanClient, ShindanDomain};
 
