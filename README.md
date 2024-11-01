@@ -24,18 +24,22 @@ shindan-maker = { version = "0.1", features = ["segments"] }
 ### Get title
 
 ```rust
+use anyhow::Result;
 use shindan_maker::{ShindanClient, ShindanDomain};
 
 #[tokio::main]
-async fn main() {
-    let client = ShindanClient::new(ShindanDomain::En).unwrap();
+async fn main() -> Result<()> {
+    let client = ShindanClient::new(ShindanDomain::En)?; // Enum variant
+    // let client = ShindanClient::new("Jp".parse()?)?; // String slice
+    // let client = ShindanClient::new("EN".parse()?)?; // Case-insensitive
+    // let client = ShindanClient::new(String::from("cn").parse()?)?; // String
     
     let title = client
         .get_title("1222992")
-        .await
-        .unwrap();
+        .await?;
     
     assert_eq!("Fantasy Stats", title);
+    Ok(())
 }
 ```
 
@@ -67,18 +71,20 @@ async fn main() {
 - HTML string to image: [cdp-html-shot](https://crates.io/crates/cdp-html-shot).
 
 ```rust
-use shindan_maker::{ShindanClient, ShindanDomain};
-
 #[tokio::main]
 async fn main() {
-    let client = ShindanClient::new(ShindanDomain::En).unwrap();
-    
-    let (_html_str, title) = client
-        .get_html_str_with_title("1222992", "test_user")
-        .await
-        .unwrap();
-    
-    assert_eq!("Fantasy Stats", title);
+    #[cfg(feature = "html")]
+    {
+        use shindan_maker::{ShindanClient, ShindanDomain};
+        let client = ShindanClient::new(ShindanDomain::En).unwrap();
+
+        let (_html_str, title) = client
+            .get_html_str_with_title("1222992", "test_user")
+            .await
+            .unwrap();
+
+        assert_eq!("Fantasy Stats", title);
+    }
 }
 ```
 

@@ -1,36 +1,14 @@
-use std::fmt;
 use scraper::Html;
-use anyhow::Result;
 use reqwest::Client;
+use anyhow::Result;
+use std::time::Duration;
+
 use crate::http_utils;
 use crate::html_utils;
-use std::time::Duration;
+use crate::shindan_domain::ShindanDomain;
 
 #[cfg(feature = "segments")]
 use crate::segment::Segments;
-
-/// A domain of ShindanMaker.
-#[derive(Debug, Clone, Copy)]
-pub enum ShindanDomain {
-    Jp,
-    En,
-    Cn,
-    Kr,
-    Th,
-}
-
-impl fmt::Display for ShindanDomain {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let url = match self {
-            Self::Jp => "https://shindanmaker.com/",
-            Self::En => "https://en.shindanmaker.com/",
-            Self::Cn => "https://cn.shindanmaker.com/",
-            Self::Kr => "https://kr.shindanmaker.com/",
-            Self::Th => "https://th.shindanmaker.com/",
-        };
-        write!(f, "{}", url)
-    }
-}
 
 /// A client for interacting with ShindanMaker.
 #[derive(Clone, Debug)]
@@ -51,9 +29,16 @@ impl ShindanClient {
 
     # Examples
     ```
+    use anyhow::Result;
     use shindan_maker::{ShindanClient, ShindanDomain};
 
-    let client = ShindanClient::new(ShindanDomain::En).unwrap();
+    fn main() -> Result<()> {
+        let client = ShindanClient::new(ShindanDomain::En)?; // Enum variant
+        let client = ShindanClient::new("Jp".parse()?)?; // String slice
+        let client = ShindanClient::new("EN".parse()?)?; // Case-insensitive
+        let client = ShindanClient::new(String::from("cn").parse()?)?; // String
+        Ok(())
+    }
     ```
     */
     pub fn new(domain: ShindanDomain) -> Result<Self> {
