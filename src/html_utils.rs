@@ -106,6 +106,36 @@ pub(crate) fn extract_title(dom: &Html) -> Result<String> {
         .to_string())
 }
 
+pub(crate) fn extract_description(dom: &Html) -> Result<String> {
+    let mut desc = Vec::new();
+
+    dom
+        .select(&SELECTORS.shindan_description_display)
+        .next()
+        .context("Failed to get the next element")?
+        .children()
+        .for_each(|child| {
+            let node = child.value();
+            match node {
+                Node::Text(text) => {
+                    desc.push(text.to_string());
+                }
+                Node::Element(element) => {
+                    if element.name() == "br" {
+                        desc.push("\n".to_string());
+                    } else if let Some(node) = child.children().next() {
+                        if let Node::Text(text) = node.value() {
+                            desc.push(text.to_string());
+                        };
+                    }
+                }
+                _ => {}
+            }
+        });
+
+    Ok(desc.join(""))
+}
+
 pub(crate) fn extract_form_data(
     dom: &Html,
     name: &str,
@@ -114,7 +144,8 @@ pub(crate) fn extract_form_data(
     let mut form_data = Vec::with_capacity(FIELDS.len() + 1);
 
     for (index, &field) in FIELDS.iter().enumerate() {
-        let value = dom.select(&SELECTORS.form[index])
+        let value = dom
+            .select(&SELECTORS.form[index])
             .next()
             .context("Failed to get the next element")?
             .value()

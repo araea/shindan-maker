@@ -111,8 +111,8 @@ mod tests {
     async fn test_get_title() {
         let client = ShindanClient::new(ShindanDomain::En).unwrap();
 
-        let title = client.
-            get_title("1222992")
+        let (title, _desc) = client.
+            get_title_with_description("1222992")
             .await
             .unwrap();
 

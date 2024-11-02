@@ -6,6 +6,7 @@ pub(crate) static SELECTORS: Lazy<Selectors> = Lazy::new(Selectors::new);
 #[derive(Clone)]
 pub(crate) struct Selectors {
     pub(crate) shindan_title: Selector,
+    pub(crate) shindan_description_display: Selector,
     pub(crate) form: Vec<Selector>,
 
     #[cfg(feature = "segments")]
@@ -21,6 +22,7 @@ impl Selectors {
     fn new() -> Self {
         Self {
             shindan_title: Selector::parse("#shindanTitle").expect("Failed to parse selector"),
+            shindan_description_display: Selector::parse("#shindanDescriptionDisplay").expect("Failed to parse selector"),
             form: vec![
                 Selector::parse("input[name=_token]").expect("Failed to parse selector"),
                 Selector::parse("input[name=randname]").expect("Failed to parse selector"),
