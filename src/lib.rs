@@ -100,7 +100,7 @@ mod html_template;
 pub use client::ShindanClient;
 pub use shindan_domain::ShindanDomain;
 #[cfg(feature = "segments")]
-pub use segment::Segment;
+pub use segment::{Segment, Segments};
 
 #[cfg(test)]
 mod tests {
