@@ -1,6 +1,7 @@
 use serde_json::json;
 use scraper::{Html, Node};
 use anyhow::{Context, Result};
+
 use crate::selectors::SELECTORS;
 
 #[cfg(feature = "segments")]
@@ -9,6 +10,7 @@ use crate::segment::{Segment, Segments};
 #[cfg(feature = "html")]
 use {
     anyhow::anyhow,
+    scraper::Element,
     crate::html_template::HTML_TEMPLATE,
 };
 
@@ -55,11 +57,25 @@ pub(crate) fn get_segments(response_text: &str) -> Result<Segments> {
 pub(crate) fn get_html_str(id: &str, response_text: &str) -> Result<String> {
     let result_document = Html::parse_document(response_text);
 
-    let title_and_result = result_document
+    let mut title_and_result = result_document
         .select(&SELECTORS.title_and_result)
         .next()
         .context("Failed to get the next element")?
         .html();
+
+    for effects_selector in &SELECTORS.effects {
+        let effects = result_document.select(effects_selector);
+        for effect in effects {
+            if let Some(next_el) = effect.next_sibling_element() {
+                if next_el.value().name() == "noscript" {
+                    let content = next_el.inner_html();
+
+                    title_and_result = title_and_result.replace(&effect.html(), "")
+                        .replace(&next_el.html(), &content);
+                }
+            }
+        }
+    }
 
     let mut html = HTML_TEMPLATE
         .replace("<!-- TITLE_AND_RESULT -->", &title_and_result);

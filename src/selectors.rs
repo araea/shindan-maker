@@ -16,6 +16,8 @@ pub(crate) struct Selectors {
     pub(crate) title_and_result: Selector,
     #[cfg(feature = "html")]
     pub(crate) script: Selector,
+    #[cfg(feature = "html")]
+    pub(crate) effects: Vec<Selector>,
 }
 
 impl Selectors {
@@ -36,6 +38,11 @@ impl Selectors {
             title_and_result: Selector::parse("#title_and_result").expect("Failed to parse selector"),
             #[cfg(feature = "html")]
             script: Selector::parse("script").expect("Invalid script selector"),
+            #[cfg(feature = "html")]
+            effects: vec![
+                Selector::parse("span.shindanEffects[data-mode=ef_typing]").expect("Invalid script selector"),
+                Selector::parse("span.shindanEffects[data-mode=ef_shuffle]").expect("Invalid script selector"),
+            ],
         }
     }
 }
