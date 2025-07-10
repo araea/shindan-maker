@@ -1,10 +1,10 @@
-use scraper::Html;
 use anyhow::Result;
 use reqwest::Client;
+use scraper::Html;
 use std::time::Duration;
 
-use crate::http_utils;
 use crate::html_utils;
+use crate::http_utils;
 use crate::shindan_domain::ShindanDomain;
 
 #[cfg(feature = "segments")]
@@ -47,7 +47,8 @@ impl ShindanClient {
         Ok(Self {
             domain,
             client: Client::builder()
-                .user_agent("shindan-maker")
+                .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0")
+                .use_rustls_tls()
                 .timeout(Duration::from_secs(TIMEOUT_SECS))
                 .build()?,
         })
@@ -162,19 +163,14 @@ impl ShindanClient {
 
         Ok((
             html_utils::extract_title(&document)?,
-            html_utils::extract_description(&document)?
+            html_utils::extract_description(&document)?,
         ))
     }
 
     async fn fetch_document(&self, id: &str) -> Result<Html> {
         let url = format!("{}{}", self.domain, id);
 
-        let text = self.client
-            .get(&url)
-            .send()
-            .await?
-            .text()
-            .await?;
+        let text = self.client.get(&url).send().await?.text().await?;
 
         Ok(Html::parse_document(&text))
     }
@@ -192,7 +188,8 @@ impl ShindanClient {
         let initial_response_text = initial_response.text().await?;
 
         let (title, form_data) = if extract_title {
-            let (title, form_data) = html_utils::extract_title_and_form_data(&initial_response_text, name)?;
+            let (title, form_data) =
+                html_utils::extract_title_and_form_data(&initial_response_text, name)?;
             (Some(title), form_data)
         } else {
             let document = Html::parse_document(&initial_response_text);
@@ -201,7 +198,8 @@ impl ShindanClient {
         };
 
         let headers = http_utils::prepare_headers(&session_cookie)?;
-        let response_text = self.client
+        let response_text = self
+            .client
             .post(&url)
             .headers(headers)
             .form(&form_data)
@@ -351,7 +349,7 @@ impl ShindanClient {
     #[tokio::main]
     async fn main() {
         let client = ShindanClient::new(ShindanDomain::En).unwrap();
-        
+
         let (_html_str, title) = client
             .get_html_str_with_title("1222992", "test_user")
             .await
@@ -362,11 +360,7 @@ impl ShindanClient {
     ```
     */
     #[cfg(feature = "html")]
-    pub async fn get_html_str_with_title(
-        &self,
-        id: &str,
-        name: &str,
-    ) -> Result<(String, String)> {
+    pub async fn get_html_str_with_title(&self, id: &str, name: &str) -> Result<(String, String)> {
         let (title, response_text) = self.get_title_and_init_res(id, name).await?;
 
         let html = html_utils::get_html_str(id, &response_text)?;
