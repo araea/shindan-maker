@@ -1,6 +1,6 @@
 use scraper::Html;
-use reqwest::Client;
 use anyhow::Result;
+use reqwest::Client;
 use std::time::Duration;
 
 use crate::http_utils;

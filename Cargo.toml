@@ -7,7 +7,13 @@ authors = ["Nawyjx <3373167460@qq.com>"]
 categories = ["web-programming::http-client"]
 documentation = "https://docs.rs/shindan-maker"
 repository = "https://github.com/araea/shindan-maker"
-keywords = ["shindan", "shindanmaker", "shindan-maker", "fortune-tellings", "diagnosis"]
+keywords = [
+    "shindan",
+    "shindanmaker",
+    "shindan-maker",
+    "fortune-tellings",
+    "diagnosis",
+]
 description = "A Rust library for interacting with ShindanMaker, the popular personality quiz service."
 
 [[example]]
