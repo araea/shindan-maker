@@ -1,7 +1,7 @@
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::fmt;
 use std::ops::Deref;
-use serde_json::Value;
-use serde::{Deserialize, Serialize};
 
 /// A segment of a shindan result.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,8 +55,18 @@ impl Segment {
     */
     pub fn get_str(&self) -> Option<String> {
         match self.type_.as_str() {
-            "text" => self.data.as_object().and_then(|map| map.get("text")).and_then(Value::as_str).map(String::from),
-            "image" => self.data.as_object().and_then(|map| map.get("file")).and_then(Value::as_str).map(String::from),
+            "text" => self
+                .data
+                .as_object()
+                .and_then(|map| map.get("text"))
+                .and_then(Value::as_str)
+                .map(String::from),
+            "image" => self
+                .data
+                .as_object()
+                .and_then(|map| map.get("file"))
+                .and_then(Value::as_str)
+                .map(String::from),
             _ => None,
         }
     }
@@ -84,7 +94,8 @@ impl Deref for Segments {
 
 impl fmt::Display for Segments {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let str = self.iter()
+        let str = self
+            .iter()
             .map(|segment| segment.get_str().unwrap())
             .collect::<Vec<String>>()
             .join("");

@@ -1,7 +1,7 @@
-use std::fs;
 use anyhow::Result;
-use std::path::Path;
 use shindan_maker::{ShindanClient, ShindanDomain};
+use std::fs;
+use std::path::Path;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -10,7 +10,10 @@ async fn main() -> Result<()> {
     const OUTPUT_FILE: &str = "shindan.html";
 
     if Path::new(OUTPUT_FILE).exists() {
-        println!("Warning: {} already exists, will be overwritten", OUTPUT_FILE);
+        println!(
+            "Warning: {} already exists, will be overwritten",
+            OUTPUT_FILE
+        );
     }
 
     let client = ShindanClient::new(ShindanDomain::En)?;

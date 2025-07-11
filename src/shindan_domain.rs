@@ -1,5 +1,5 @@
-use std::fmt;
 use anyhow::anyhow;
+use std::fmt;
 use std::str::FromStr;
 
 /// A domain of ShindanMaker.

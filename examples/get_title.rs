@@ -10,9 +10,7 @@ async fn main() -> Result<()> {
     // let client = ShindanClient::new("EN".parse()?)?; // Case-insensitive
     // let client = ShindanClient::new(String::from("cn").parse()?)?; // String
 
-    let (title, desc) = client
-        .get_title_with_description(SHINDAN_ID)
-        .await?;
+    let (title, desc) = client.get_title_with_description(SHINDAN_ID).await?;
 
     println!("Title: {}", title);
     println!("Description: {}", desc);

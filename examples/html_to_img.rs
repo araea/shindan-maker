@@ -1,8 +1,8 @@
-use std::fs;
-use base64::Engine;
 use anyhow::Result;
+use base64::Engine;
 use cdp_html_shot::Browser;
 use shindan_maker::{ShindanClient, ShindanDomain};
+use std::fs;
 
 #[tokio::main]
 async fn main() -> Result<()> {

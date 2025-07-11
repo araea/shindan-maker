@@ -1,5 +1,5 @@
-use scraper::Selector;
 use once_cell::sync::Lazy;
+use scraper::Selector;
 
 pub(crate) static SELECTORS: Lazy<Selectors> = Lazy::new(Selectors::new);
 
@@ -24,7 +24,8 @@ impl Selectors {
     fn new() -> Self {
         Self {
             shindan_title: Selector::parse("#shindanTitle").expect("Failed to parse selector"),
-            shindan_description_display: Selector::parse("#shindanDescriptionDisplay").expect("Failed to parse selector"),
+            shindan_description_display: Selector::parse("#shindanDescriptionDisplay")
+                .expect("Failed to parse selector"),
             form: vec![
                 Selector::parse("input[name=_token]").expect("Failed to parse selector"),
                 Selector::parse("input[name=randname]").expect("Failed to parse selector"),
@@ -35,13 +36,16 @@ impl Selectors {
             post_display: Selector::parse("#post_display").expect("Invalid selector"),
 
             #[cfg(feature = "html")]
-            title_and_result: Selector::parse("#title_and_result").expect("Failed to parse selector"),
+            title_and_result: Selector::parse("#title_and_result")
+                .expect("Failed to parse selector"),
             #[cfg(feature = "html")]
             script: Selector::parse("script").expect("Invalid script selector"),
             #[cfg(feature = "html")]
             effects: vec![
-                Selector::parse("span.shindanEffects[data-mode=ef_typing]").expect("Invalid script selector"),
-                Selector::parse("span.shindanEffects[data-mode=ef_shuffle]").expect("Invalid script selector"),
+                Selector::parse("span.shindanEffects[data-mode=ef_typing]")
+                    .expect("Invalid script selector"),
+                Selector::parse("span.shindanEffects[data-mode=ef_shuffle]")
+                    .expect("Invalid script selector"),
             ],
         }
     }

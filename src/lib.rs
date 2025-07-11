@@ -88,19 +88,19 @@ async fn main() {
 */
 
 mod client;
-mod selectors;
-mod html_utils;
-mod http_utils;
-mod shindan_domain;
-#[cfg(feature = "segments")]
-mod segment;
 #[cfg(feature = "html")]
 mod html_template;
+mod html_utils;
+mod http_utils;
+#[cfg(feature = "segments")]
+mod segment;
+mod selectors;
+mod shindan_domain;
 
 pub use client::ShindanClient;
-pub use shindan_domain::ShindanDomain;
 #[cfg(feature = "segments")]
 pub use segment::{Segment, Segments};
+pub use shindan_domain::ShindanDomain;
 
 #[cfg(test)]
 mod tests {
@@ -111,10 +111,7 @@ mod tests {
     async fn test_get_title() {
         let client = ShindanClient::new(ShindanDomain::En).unwrap();
 
-        let (title, _desc) = client.
-            get_title_with_description("1222992")
-            .await
-            .unwrap();
+        let (title, _desc) = client.get_title_with_description("1222992").await.unwrap();
 
         assert_eq!("Fantasy Stats", title);
     }
