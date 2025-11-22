@@ -6,7 +6,7 @@ async fn main() -> Result<()> {
     const SHINDAN_ID: &str = "1222992";
     const USER_NAME: &str = "test_user";
 
-    let client = ShindanClient::new(ShindanDomain::En)?;
+    let client = ShindanClient::new(ShindanDomain::Jp)?;
     let (segments, title) = client
         .get_segments_with_title(SHINDAN_ID, USER_NAME)
         .await?;

@@ -7,7 +7,7 @@ async fn main() -> Result<()> {
     // const SHINDAN_ID: &str = "1222992";
     const SHINDAN_ID: &str = "1253257";
 
-    let client = ShindanClient::new(ShindanDomain::En)?; // Enum variant
+    let client = ShindanClient::new(ShindanDomain::Jp)?; // Enum variant
     // let client = ShindanClient::new("Jp".parse()?)?; // String slice
     // let client = ShindanClient::new("EN".parse()?)?; // Case-insensitive
     // let client = ShindanClient::new(String::from("cn").parse()?)?; // String

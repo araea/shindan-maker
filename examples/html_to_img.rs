@@ -43,5 +43,7 @@ async fn main() -> Result<()> {
         println!("Screenshot saved to {}", output_file);
     }
 
+    browser.close().unwrap();
+
     Ok(())
 }
