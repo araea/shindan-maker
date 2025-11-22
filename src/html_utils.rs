@@ -8,7 +8,11 @@ use crate::selectors::SELECTORS;
 use crate::segment::{Segment, Segments};
 
 #[cfg(feature = "html")]
-use {crate::html_template::HTML_TEMPLATE, anyhow::anyhow, scraper::Element};
+use {
+    crate::html_template::{APP_JS, CHART_JS, build_html},
+    anyhow::anyhow,
+    scraper::Element,
+};
 
 #[cfg(feature = "segments")]
 pub(crate) fn get_segments(response_text: &str) -> Result<Segments> {
@@ -87,7 +91,7 @@ pub(crate) fn get_html_str(id: &str, response_text: &str, base_url: &str) -> Res
         }
     }
 
-    let mut html = HTML_TEMPLATE
+    let mut html = build_html()
         .replace("<!-- TITLE_AND_RESULT -->", &title_and_result)
         .replace(
             "<!-- BASE_URL -->",
@@ -96,12 +100,12 @@ pub(crate) fn get_html_str(id: &str, response_text: &str, base_url: &str) -> Res
 
     if response_text.contains("chart.js") {
         let mut scripts = vec![
-            r#"<script src="/js/app.js" defer=""></script>"#,
-            r#"<script src="/js/chart.js" defer=""></script>"#,
+            format!(r#"<script>{}</script>"#, APP_JS),
+            format!(r#"<script>{}</script>"#, CHART_JS),
         ];
 
         let shindan_script = get_first_script(&result_document, id)?;
-        scripts.push(&shindan_script);
+        scripts.push(shindan_script);
         html = html.replace("<!-- SCRIPTS -->", &scripts.join("\n"));
     }
     Ok(html)
