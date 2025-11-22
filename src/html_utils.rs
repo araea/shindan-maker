@@ -158,9 +158,10 @@ pub(crate) fn extract_description(dom: &Html) -> Result<String> {
                     if element.name() == "br" {
                         desc.push("\n".to_string());
                     } else if let Some(node) = child.children().next()
-                        && let Node::Text(text) = node.value() {
-                            desc.push(text.to_string());
-                        };
+                        && let Node::Text(text) = node.value()
+                    {
+                        desc.push(text.to_string());
+                    };
                 }
                 _ => {}
             }
