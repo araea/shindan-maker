@@ -49,7 +49,8 @@ base64 = "0.22"
 cdp-html-shot = "0.1"
 
 [features]
-default = ["segments"]
+# default = ["segments"]
+default = ["full"]
 full = ["segments", "html"]
 segments = []
 html = []

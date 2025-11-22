@@ -8,6 +8,7 @@ pub(crate) struct Selectors {
     pub(crate) shindan_title: Selector,
     pub(crate) shindan_description_display: Selector,
     pub(crate) form: Vec<Selector>,
+    pub(crate) input_parts: Selector,
 
     #[cfg(feature = "segments")]
     pub(crate) post_display: Selector,
@@ -31,6 +32,8 @@ impl Selectors {
                 Selector::parse("input[name=randname]").expect("Failed to parse selector"),
                 Selector::parse("input[name=type]").expect("Failed to parse selector"),
             ],
+            input_parts: Selector::parse(r#"input[name^="parts["]"#)
+                .expect("Failed to parse selector"),
 
             #[cfg(feature = "segments")]
             post_display: Selector::parse("#post_display").expect("Invalid selector"),

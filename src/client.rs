@@ -329,7 +329,7 @@ impl ShindanClient {
     #[cfg(feature = "html")]
     pub async fn get_html_str(&self, id: &str, name: &str) -> Result<String> {
         let response_text = self.init_res(id, name).await?;
-        html_utils::get_html_str(id, &response_text)
+        html_utils::get_html_str(id, &response_text, &self.domain.to_string())
     }
 
     /**
@@ -363,7 +363,7 @@ impl ShindanClient {
     pub async fn get_html_str_with_title(&self, id: &str, name: &str) -> Result<(String, String)> {
         let (title, response_text) = self.get_title_and_init_res(id, name).await?;
 
-        let html = html_utils::get_html_str(id, &response_text)?;
+        let html = html_utils::get_html_str(id, &response_text, &self.domain.to_string())?;
 
         Ok((html, title))
     }

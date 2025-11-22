@@ -3,7 +3,9 @@ use shindan_maker::{ShindanClient, ShindanDomain};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    const SHINDAN_ID: &str = "1222992";
+    // const SHINDAN_ID: &str = "1252750";
+    // const SHINDAN_ID: &str = "1222992";
+    const SHINDAN_ID: &str = "1253257";
 
     let client = ShindanClient::new(ShindanDomain::En)?; // Enum variant
     // let client = ShindanClient::new("Jp".parse()?)?; // String slice

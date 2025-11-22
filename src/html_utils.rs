@@ -63,7 +63,7 @@ pub(crate) fn get_segments(response_text: &str) -> Result<Segments> {
 }
 
 #[cfg(feature = "html")]
-pub(crate) fn get_html_str(id: &str, response_text: &str) -> Result<String> {
+pub(crate) fn get_html_str(id: &str, response_text: &str, base_url: &str) -> Result<String> {
     let result_document = Html::parse_document(response_text);
 
     let mut title_and_result = result_document
@@ -87,12 +87,17 @@ pub(crate) fn get_html_str(id: &str, response_text: &str) -> Result<String> {
         }
     }
 
-    let mut html = HTML_TEMPLATE.replace("<!-- TITLE_AND_RESULT -->", &title_and_result);
+    let mut html = HTML_TEMPLATE
+        .replace("<!-- TITLE_AND_RESULT -->", &title_and_result)
+        .replace(
+            "<!-- BASE_URL -->",
+            &format!(r#"<base href="{}">"#, base_url),
+        );
 
     if response_text.contains("chart.js") {
         let mut scripts = vec![
-            r#"<script src="https://cn.shindanmaker.com/js/app.js?id=163959a7e23bfa7264a0ddefb3c36f13" defer=""></script>"#,
-            r#"<script src="https://cn.shindanmaker.com/js/chart.js?id=391e335afc72362acd6bf1ea1ba6b74c" defer=""></script>"#,
+            r#"<script src="/js/app.js" defer=""></script>"#,
+            r#"<script src="/js/chart.js" defer=""></script>"#,
         ];
 
         let shindan_script = get_first_script(&result_document, id)?;
@@ -117,7 +122,7 @@ pub(crate) fn get_first_script(result_document: &Html, id: &str) -> Result<Strin
 pub(crate) fn extract_title_and_form_data(
     html_content: &str,
     name: &str,
-) -> Result<(String, Vec<(&'static str, String)>)> {
+) -> Result<(String, Vec<(String, String)>)> {
     let document = Html::parse_document(html_content);
     let title = extract_title(&document)?;
     let form_data = extract_form_data(&document, name)?;
@@ -165,7 +170,7 @@ pub(crate) fn extract_description(dom: &Html) -> Result<String> {
     Ok(desc.join(""))
 }
 
-pub(crate) fn extract_form_data(dom: &Html, name: &str) -> Result<Vec<(&'static str, String)>> {
+pub(crate) fn extract_form_data(dom: &Html, name: &str) -> Result<Vec<(String, String)>> {
     const FIELDS: &[&str] = &["_token", "randname", "type"];
     let mut form_data = Vec::with_capacity(FIELDS.len() + 1);
 
@@ -173,15 +178,20 @@ pub(crate) fn extract_form_data(dom: &Html, name: &str) -> Result<Vec<(&'static 
         let value = dom
             .select(&SELECTORS.form[index])
             .next()
-            .context("Failed to get the next element")?
-            .value()
-            .attr("value")
-            .context("Failed to get value attribute")?;
+            .and_then(|element| element.value().attr("value"))
+            .unwrap_or("")
+            .to_string();
 
-        form_data.push((field, value.to_string()));
+        form_data.push((field.to_string(), value));
     }
 
-    form_data.push(("user_input_value_1", name.to_string()));
+    form_data.push(("user_input_value_1".to_string(), name.to_string()));
+
+    for element in dom.select(&SELECTORS.input_parts) {
+        if let Some(input_name) = element.value().attr("name") {
+            form_data.push((input_name.to_string(), name.to_string()));
+        }
+    }
 
     Ok(form_data)
 }
