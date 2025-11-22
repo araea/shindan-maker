@@ -10,6 +10,7 @@ A Rust library for interacting with [ShindanMaker](https://en.shindanmaker.com/)
 - Asynchronous API (Tokio)
 - Multi-domain support (JP, EN, CN, KR, TH)
 - Easy shindan submission and result parsing
+- Currently only supports single-name diagnosis
 
 ## Usage
 
